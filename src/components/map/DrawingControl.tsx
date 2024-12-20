@@ -44,50 +44,50 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
   // Handle drawing mode changes
   useEffect(() => {
     if (isDrawingMode) {
-      if (!drawControlRef.current) {
-        // Initialize draw control if it doesn't exist
-        drawControlRef.current = new L.Control.Draw({
-          position: 'topleft',
-          draw: {
-            rectangle: false,
-            circle: false,
-            circlemarker: false,
-            marker: false,
-            polyline: {
-              shapeOptions: {
-                color: '#5F9EA0',
-                weight: 3
-              }
-            },
-            polygon: {
-              allowIntersection: false,
-              drawError: {
-                color: '#e1e100',
-                message: '<strong>Draw error!</strong> Polygons cannot intersect.'
+          if (!drawControlRef.current) {
+            // Initialize draw control if it doesn't exist
+            drawControlRef.current = new L.Control.Draw({
+              position: 'topleft',
+              draw: {
+                rectangle: false,
+                circle: false,
+                circlemarker: false,
+                marker: false,
+                polyline: {
+                  shapeOptions: {
+                    color: '#5F9EA0',
+                    weight: 3
+                  }
+                },
+                polygon: {
+                  allowIntersection: false,
+                  drawError: {
+                    color: '#e1e100',
+                    message: '<strong>Draw error!</strong> Polygons cannot intersect.'
+                  },
+                  shapeOptions: {
+                    color: '#5F9EA0',
+                    weight: 3
+                  }
+                }
               },
-              shapeOptions: {
-                color: '#5F9EA0',
-                weight: 3
+              edit: {
+                featureGroup: drawnItemsRef.current,
+                remove: true
               }
-            }
-          },
-          edit: {
-            featureGroup: drawnItemsRef.current,
-            remove: true
+            });
           }
-        });
-      }
-      
-      map.addControl(drawControlRef.current);
-      
-      // Start polygon drawing automatically
-      new L.Draw.Polygon(map, drawControlRef.current.options.draw.polygon).enable();
-      
-    } else {
-      if (drawControlRef.current) {
-        map.removeControl(drawControlRef.current);
-      }
-    }
+
+          map.addControl(drawControlRef.current);
+
+          // Start polygon drawing automatically
+          new L.Draw.Polygon(map, drawControlRef.current.options.draw.polygon).enable();
+
+        }
+    else if (drawControlRef.current) {
+            map.removeControl(drawControlRef.current);
+          }
+
   }, [isDrawingMode, map]);
 
   return null;
