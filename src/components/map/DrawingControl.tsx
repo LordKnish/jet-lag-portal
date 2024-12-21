@@ -4,7 +4,6 @@ import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-draw';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { DrawMap } from '../../types/map';
 
 interface DrawingControlProps {
   onDrawComplete?: (layer: L.Layer) => void;
@@ -15,7 +14,7 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
   onDrawComplete,
   isDrawingMode 
 }) => {
-  const map = useMap() as DrawMap;
+  const map = useMap();
   const drawControlRef = useRef<L.Control.Draw | null>(null);
   const drawnItemsRef = useRef(new L.FeatureGroup());
   
@@ -44,7 +43,7 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
   useEffect(() => {
     if (isDrawingMode) {
       if (!drawControlRef.current) {
-        const drawOptions: L.DrawControlOptions = {
+        const drawOptions: L.DrawConstructorOptions = {
           position: 'topleft',
           draw: {
             rectangle: false,
@@ -80,8 +79,9 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
 
       map.addControl(drawControlRef.current);
 
-      const polygonDrawer = new L.Draw.Polygon(map);
-      polygonDrawer.enable();
+      // Start polygon drawing automatically
+      new L.Draw.Polygon(map).enable();
+
     } else if (drawControlRef.current) {
       map.removeControl(drawControlRef.current);
     }
