@@ -118,7 +118,6 @@ const LayerPanel: React.FC<LayerPanelProps> = ({
   onDeleteLayer,
   onToggleLayer,
   onRenameLayer,
-  onReorderLayers,
   activeLayer,
   setActiveLayer,
 }) => {

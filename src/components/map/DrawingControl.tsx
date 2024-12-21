@@ -21,7 +21,7 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
   useEffect(() => {
     map.addLayer(drawnItemsRef.current);
     
-    const handleDrawCreated = (e: any) => {
+    const handleDrawCreated = (e: L.DrawEvents.Created) => {
       const layer = e.layer;
       drawnItemsRef.current.addLayer(layer);
       
@@ -43,10 +43,10 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
   useEffect(() => {
     if (isDrawingMode) {
       if (!drawControlRef.current) {
-        const drawOptions: L.DrawConstructorOptions = {
+        const drawOptions: L.Control.DrawConstructorOptions = {
           position: 'topleft',
           draw: {
-            rectangle: false,
+            rectangle: false, // Correctly set to false
             circle: false,
             circlemarker: false,
             marker: false,
@@ -80,7 +80,8 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
       map.addControl(drawControlRef.current);
 
       // Start polygon drawing automatically
-      new L.Draw.Polygon(map).enable();
+      const polygonDrawer = new L.Draw.Polygon(map, drawControlRef.current.options.draw?.polygon);
+      polygonDrawer.enable();
 
     } else if (drawControlRef.current) {
       map.removeControl(drawControlRef.current);
