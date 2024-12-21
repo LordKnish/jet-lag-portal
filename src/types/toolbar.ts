@@ -1,5 +1,5 @@
-// src/components/common/ui/Toolbar.tsx
-import { MapMode } from '../../../types/toolbar';
+// src/types/toolbar.ts
+export type MapMode = 'draw' | 'measure' | null;
 
 export interface ToolbarProps {
   onToolChange: (tool: MapMode) => void;

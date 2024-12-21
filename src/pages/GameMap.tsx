@@ -13,7 +13,7 @@ import { LatLngBounds, LatLng } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AlertCircle } from 'lucide-react';
 import { GeoJSON } from 'geojson';
-
+import { LatLngTuple } from 'leaflet';
 import Toolbar from '../components/common/ui/Toolbar';
 import LayerPanel from '../components/map/LayerPanel';
 import { Layer } from '../types/map';
@@ -137,8 +137,8 @@ const GameMap: React.FC = () => {
   }, []);
 
   const handleReorderLayers = useCallback((startIndex: number, endIndex: number) => {
-    setLayers(prev => {
-      const result = Array.from(prev);
+    setLayers((prevLayers: Layer[]) => {
+      const result = Array.from(prevLayers);
       const [removed] = result.splice(startIndex, 1);
       result.splice(endIndex, 0, removed);
       return result;
@@ -282,7 +282,6 @@ const GameMap: React.FC = () => {
             onDeleteLayer={handleDeleteLayer}
             onToggleLayer={handleToggleLayer}
             onRenameLayer={handleRenameLayer}
-            onReorderLayers={handleReorderLayers}
             activeLayer={activeLayer}
             setActiveLayer={setActiveLayer}
           />

@@ -1,5 +1,5 @@
 // src/types/map.ts
-import type { LatLngExpression, LatLngTuple } from 'leaflet';
+import type { LatLngExpression, LatLngTuple, Map as LeafletMap } from 'leaflet';
 
 export interface Layer {
   id: string;
@@ -10,10 +10,15 @@ export interface Layer {
   data: LatLngExpression[][] | null;
 }
 
+export interface DrawMap extends LeafletMap {
+  mergeOptions: (options: any) => void;
+  addInitHook: (hook: () => void) => void;
+}
+
 declare global {
   namespace L {
     interface DrawControlOptions {
-      position?: string;
+      position?: L.ControlPosition;
       draw?: {
         polyline?: any;
         polygon?: {
@@ -39,5 +44,3 @@ declare global {
     }
   }
 }
-
-export type PolygonCoords = LatLngTuple[][];
