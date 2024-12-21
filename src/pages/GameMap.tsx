@@ -146,12 +146,14 @@ const GameMap: React.FC = () => {
   }, []);
 
   const handleDrawComplete = useCallback((layer: L.Layer) => {
-    if (activeLayer) {
-      const coords = (layer as L.Polygon).getLatLngs();
-      setLayers(prev => prev.map(layer => 
-        layer.id === activeLayer 
-          ? { ...layer, data: [coords] }
-          : layer
+    if (activeLayer && layer instanceof L.Polygon) {
+      const coords = layer.getLatLngs()[0] as L.LatLng[];
+      const coordsArray = coords.map(latLng => [latLng.lat, latLng.lng] as LatLngTuple);
+      
+      setLayers(prev => prev.map(prevLayer => 
+        prevLayer.id === activeLayer 
+          ? { ...prevLayer, data: [coordsArray] }
+          : prevLayer
       ));
     }
   }, [activeLayer]);

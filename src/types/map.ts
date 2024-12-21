@@ -1,5 +1,5 @@
 // src/types/map.ts
-import { LatLngExpression } from 'leaflet';
+import type { LatLngExpression, LatLngTuple } from 'leaflet';
 
 export interface Layer {
   id: string;
@@ -10,37 +10,34 @@ export interface Layer {
   data: LatLngExpression[][] | null;
 }
 
-declare module 'leaflet' {
-  interface DrawOptions {
-    polyline?: any;
-    polygon?: {
-      allowIntersection?: boolean;
-      drawError?: {
-        color: string;
-        message: string;
+declare global {
+  namespace L {
+    interface DrawControlOptions {
+      position?: string;
+      draw?: {
+        polyline?: any;
+        polygon?: {
+          allowIntersection?: boolean;
+          drawError?: {
+            color: string;
+            message: string;
+          };
+          shapeOptions?: {
+            color: string;
+            weight: number;
+          };
+        };
+        rectangle?: boolean;
+        circle?: boolean;
+        circlemarker?: boolean;
+        marker?: boolean;
       };
-      shapeOptions?: {
-        color: string;
-        weight: number;
+      edit?: {
+        featureGroup: L.FeatureGroup;
+        remove?: boolean;
       };
-    };
-    rectangle?: boolean;
-    circle?: boolean;
-    circlemarker?: boolean;
-    marker?: boolean;
-  }
-
-  interface DrawControlOptions extends L.ControlOptions {
-    draw?: DrawOptions;
-    edit?: {
-      featureGroup: L.FeatureGroup;
-      remove?: boolean;
-    };
-  }
-
-  namespace Control {
-    class Draw extends L.Control {
-      constructor(options: DrawControlOptions);
     }
   }
 }
+
+export type PolygonCoords = LatLngTuple[][];

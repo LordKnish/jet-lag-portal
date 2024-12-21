@@ -4,15 +4,14 @@ import { Plus, Trash2, Eye, EyeOff, Edit2, GripHorizontal } from 'lucide-react';
 import { Layer } from '../../types/layer';
 
 interface LayerPanelProps {
-  layers: Layer[];
-  onAddLayer: () => void;
-  onDeleteLayer: (id: string) => void;
-  onToggleLayer: (id: string) => void;
-  onRenameLayer: (id: string, name: string) => void;
-  onReorderLayers?: (startIndex: number, endIndex: number) => void;
-  activeLayer: string | null;
-  setActiveLayer: (id: string | null) => void;
-}
+    layers: Layer[];
+    onAddLayer: () => void;
+    onDeleteLayer: (id: string) => void;
+    onToggleLayer: (id: string) => void;
+    onRenameLayer: (id: string, name: string) => void;
+    activeLayer: string | null;
+    setActiveLayer: (id: string | null) => void;
+  }
 
 const LayerItem: React.FC<{
   layer: Layer;
