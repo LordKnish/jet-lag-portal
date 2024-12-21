@@ -127,12 +127,6 @@ git push origin feature/your-feature-name
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🔒 Security
-
-Please report any security vulnerabilities to [your-email@example.com]. Do not create public issues for security vulnerabilities.
-
-## 🌟 Acknowledgments
-
 - This project is inspired by the Jet Lag series, though we are not affiliated with them
 - OpenStreetMap contributors
 - React and Leaflet communities
