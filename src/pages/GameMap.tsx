@@ -12,13 +12,13 @@ import {
 import { LatLngBounds, LatLng } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AlertCircle } from 'lucide-react';
+import { GeoJSON } from 'geojson';
 
 import Toolbar from '../components/common/ui/Toolbar';
 import LayerPanel from '../components/map/LayerPanel';
-import { Layer } from '../types/layer';
+import { Layer } from '../types/map';
 import DrawingControl from '../components/map/DrawingControl';
-import { GeoJSON } from 'geojson';
-
+import { MapMode } from '../types/toolbar';
 
 // Utility function to parse WKT polygon data
 const parseWKTPolygon = (wkt: string): [number, number][] => {
@@ -94,9 +94,7 @@ const GameMap: React.FC = () => {
   const [boundary, setBoundary] = useState<[number, number][]>([]);
   const [layers, setLayers] = useState<Layer[]>([]);
   const [activeLayer, setActiveLayer] = useState<string | null>(null);
-  const [activeZone, setActiveZone] = useState<'hide' | 'precision' | null>(null);
-  const [mapMode, setMapMode] = useState<'draw' | 'measure' | null>(null);
-  const [drawings, setDrawings] = useState<GeoJSON[]>([]);
+  const [mapMode, setMapMode] = useState<MapMode>(null);
 
   // Map center coordinates (Tel Aviv)
   const defaultCenter: [number, number] = useMemo(() => [32.0700, 34.7674], []);
@@ -148,8 +146,6 @@ const GameMap: React.FC = () => {
   }, []);
 
   const handleDrawComplete = useCallback((geoJSON: GeoJSON) => {
-    setDrawings(prev => [...prev, geoJSON]);
-    // If you want to save the drawing to the active layer:
     if (activeLayer) {
       setLayers(prev => prev.map(layer => 
         layer.id === activeLayer 
@@ -158,6 +154,10 @@ const GameMap: React.FC = () => {
       ));
     }
   }, [activeLayer]);
+
+  const handleToolChange = useCallback((tool: MapMode) => {
+    setMapMode(prev => prev === tool ? null : tool);
+  }, []);
 
   // Load boundary data on mount
   useEffect(() => {
@@ -185,9 +185,9 @@ const GameMap: React.FC = () => {
       {/* Toolbar */}
       <div className="flex-none w-full">
         <Toolbar
-            onToolChange={(tool) => setMapMode(prevMode => tool === prevMode ? null : tool)}
-            activeTool={mapMode}
-            disabled={isLoading || !!error}
+          onToolChange={handleToolChange}
+          activeTool={mapMode}
+          disabled={isLoading || !!error}
         />
       </div>
 
@@ -195,7 +195,7 @@ const GameMap: React.FC = () => {
       <div className="flex-1 flex overflow-hidden w-full">
         {/* Map Container */}
         <div className={`flex-1 relative w-full ${mapMode === 'draw' ? 'cursor-crosshair' : ''}`}>
-            {isLoading && <LoadingOverlay />}
+          {isLoading && <LoadingOverlay />}
           {error && <ErrorAlert message={error} />}
           
           <MapContainer
@@ -262,9 +262,11 @@ const GameMap: React.FC = () => {
                 ) : null
               )}
             </LayersControl>
+
+            {/* Drawing Control */}
             <DrawingControl 
-                onDrawComplete={handleDrawComplete} 
-                isDrawingMode={mapMode === 'draw'}
+              onDrawComplete={handleDrawComplete}
+              isDrawingMode={mapMode === 'draw'}
             />
           </MapContainer>
         </div>
