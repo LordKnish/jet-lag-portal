@@ -1,5 +1,5 @@
 // src/components/map/DrawingControl.tsx
-import React, { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-draw';
@@ -10,83 +10,65 @@ interface DrawingControlProps {
   isDrawingMode: boolean;
 }
 
-const DrawingControl: React.FC<DrawingControlProps> = ({ 
+const DrawingControl: React.FC<DrawingControlProps> = ({
   onDrawComplete,
-  isDrawingMode 
+  isDrawingMode
 }) => {
   const map = useMap();
-  const drawControlRef = useRef<L.Control.Draw | null>(null);
-  const drawnItemsRef = useRef(new L.FeatureGroup());
-  
+
   useEffect(() => {
-    map.addLayer(drawnItemsRef.current);
-    
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+
+    const drawControl = new L.Control.Draw({
+      draw: {
+        marker: false,
+        circlemarker: false,
+        circle: false,
+        polyline: false,
+        rectangle: {
+          shapeOptions: {
+            color: '#5F9EA0',
+            weight: 3
+          }
+        },
+        polygon: {
+          allowIntersection: false,
+          showArea: true,
+          shapeOptions: {
+            color: '#5F9EA0',
+            weight: 3
+          }
+        }
+      },
+      edit: {
+        featureGroup: drawnItems
+      }
+    } as L.Control.DrawConstructorOptions);
+
+    if (isDrawingMode) {
+      map.addControl(drawControl);
+    }
+
     const handleDrawCreated = (e: L.DrawEvents.Created) => {
       const layer = e.layer;
-      drawnItemsRef.current.addLayer(layer);
+      drawnItems.addLayer(layer);
       
       if (onDrawComplete) {
         onDrawComplete(layer);
       }
     };
 
-    map.on('draw:created', handleDrawCreated);
+    map.on(L.Draw.Event.CREATED, handleDrawCreated);
 
     return () => {
-      if (drawnItemsRef.current) {
-        map.removeLayer(drawnItemsRef.current);
+      map.removeLayer(drawnItems);
+      if (isDrawingMode) {
+        map.removeControl(drawControl);
       }
-      map.off('draw:created', handleDrawCreated);
+      map.off(L.Draw.Event.CREATED, handleDrawCreated);
     };
-  }, [map, onDrawComplete]);
-
-  useEffect(() => {
-    if (isDrawingMode) {
-      if (!drawControlRef.current) {
-        const drawOptions: L.Control.DrawConstructorOptions = {
-          position: 'topleft',
-          draw: {
-            rectangle: false, // Correctly set to false
-            circle: false,
-            circlemarker: false,
-            marker: false,
-            polyline: {
-              shapeOptions: {
-                color: '#5F9EA0',
-                weight: 3
-              }
-            },
-            polygon: {
-              allowIntersection: false,
-              drawError: {
-                color: '#e1e100',
-                message: '<strong>Draw error!</strong> Polygons cannot intersect.'
-              },
-              shapeOptions: {
-                color: '#5F9EA0',
-                weight: 3
-              }
-            }
-          },
-          edit: {
-            featureGroup: drawnItemsRef.current,
-            remove: true
-          }
-        };
-
-        drawControlRef.current = new L.Control.Draw(drawOptions);
-      }
-
-      map.addControl(drawControlRef.current);
-
-      // Start polygon drawing automatically
-      const polygonDrawer = new L.Draw.Polygon(map, drawControlRef.current.options.draw?.polygon);
-      polygonDrawer.enable();
-
-    } else if (drawControlRef.current) {
-      map.removeControl(drawControlRef.current);
-    }
-  }, [isDrawingMode, map]);
+  }, [map, onDrawComplete, isDrawingMode]);
 
   return null;
 };
