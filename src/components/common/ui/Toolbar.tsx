@@ -15,23 +15,29 @@ import {
   MapPin,
   Hash
 } from "@phosphor-icons/react";
+import { MapMode } from '../../../types/toolbar';
 
 interface ToolbarProps {
-  onToolChange?: (tool: string) => void;
-  onFillStyleChange?: (style: 'solid' | 'hashed') => void;
-  onUndo?: () => void;
-  onRedo?: () => void;
-  activeTool?: string;
+  onToolChange: (tool: MapMode) => void;
+  activeTool: MapMode;
   disabled?: boolean;
 }
 
-const ToolButton: React.FC<{
+interface ToolButtonProps {
   icon: React.ReactNode;
   label: string;
   onClick?: () => void;
   active?: boolean;
   disabled?: boolean;
-}> = ({ icon, label, onClick, active, disabled }) => (
+}
+
+const ToolButton: React.FC<ToolButtonProps> = ({ 
+  icon, 
+  label, 
+  onClick, 
+  active, 
+  disabled 
+}) => (
   <button
     className={`
       h-10 w-10 rounded-curved flex items-center justify-center
@@ -54,9 +60,6 @@ const ToolButton: React.FC<{
 
 const Toolbar: React.FC<ToolbarProps> = ({
   onToolChange,
-  onFillStyleChange,
-  onUndo,
-  onRedo,
   activeTool,
   disabled
 }) => {
@@ -67,73 +70,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
           {/* Drawing Tools Group */}
           <div className="flex items-center gap-1 pr-3 border-r border-jl-sage/30">
             <ToolButton
-              icon={<Hand weight="fill" />}
-              label="Pan Tool"
-              onClick={() => onToolChange?.('pan')}
-              active={activeTool === 'pan'}
-              disabled={disabled}
-            />
-            <ToolButton
               icon={<Pencil weight="fill" />}
-              label="Free Draw"
-              onClick={() => onToolChange?.('draw')}
+              label="Draw"
+              onClick={() => onToolChange('draw')}
               active={activeTool === 'draw'}
-              disabled={disabled}
-            />
-            <ToolButton
-              icon={<Eraser size={24} weight="duotone" />}
-              label="Erase"
-              onClick={() => onToolChange?.('erase')}
-              active={activeTool === 'erase'}
-              disabled={disabled}
-            />
-          </div>
-
-          {/* Shape Tools Group */}
-          <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
-            <ToolButton
-              icon={<Circle size={24} weight="duotone" />}
-              label="Radar Circle"
-              onClick={() => onToolChange?.('radar')}
-              active={activeTool === 'radar'}
-              disabled={disabled}
-            />
-            <ToolButton
-              icon={<Square size={24} weight="duotone" />}
-              label="Rectangle"
-              onClick={() => onToolChange?.('rectangle')}
-              active={activeTool === 'rectangle'}
-              disabled={disabled}
-            />
-            <ToolButton
-              icon={<SelectionAll size={24} weight="duotone" />}
-              label="Selection"
-              onClick={() => onToolChange?.('select')}
-              active={activeTool === 'select'}
-              disabled={disabled}
-            />
-          </div>
-
-          {/* Fill Tools Group */}
-          <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
-            <ToolButton
-              icon={<PaintBucket size={24} weight="duotone" />}
-              label="Solid Fill"
-              onClick={() => {
-                onToolChange?.('fill');
-                onFillStyleChange?.('solid');
-              }}
-              active={activeTool === 'fill-solid'}
-              disabled={disabled}
-            />
-            <ToolButton
-              icon={<Hash size={24} weight="duotone" />}
-              label="Hashed Fill (Uncertain Area)"
-              onClick={() => {
-                onToolChange?.('fill');
-                onFillStyleChange?.('hashed');
-              }}
-              active={activeTool === 'fill-hashed'}
               disabled={disabled}
             />
           </div>
@@ -143,38 +83,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
             <ToolButton
               icon={<Ruler size={24} weight="duotone" />}
               label="Measure"
-              onClick={() => onToolChange?.('measure')}
+              onClick={() => onToolChange('measure')}
               active={activeTool === 'measure'}
-              disabled={disabled}
-            />
-            <ToolButton
-              icon={<CirclesFour size={24} weight="duotone" />}
-              label="Distance Rings"
-              onClick={() => onToolChange?.('rings')}
-              active={activeTool === 'rings'}
-              disabled={disabled}
-            />
-            <ToolButton
-              icon={<MapPin size={24} weight="duotone" />}
-              label="Place Marker"
-              onClick={() => onToolChange?.('marker')}
-              active={activeTool === 'marker'}
-              disabled={disabled}
-            />
-          </div>
-
-          {/* History Controls Group */}
-          <div className="flex items-center gap-1 ml-auto">
-            <ToolButton
-              icon={<ArrowCounterClockwise size={24} weight="duotone" />}
-              label="Undo"
-              onClick={onUndo}
-              disabled={disabled}
-            />
-            <ToolButton
-              icon={<ArrowClockwise size={24} weight="duotone" />}
-              label="Redo"
-              onClick={onRedo}
               disabled={disabled}
             />
           </div>

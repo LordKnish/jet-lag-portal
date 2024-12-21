@@ -1,3 +1,4 @@
+// src/components/map/DrawingControl.tsx
 import React, { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -5,7 +6,7 @@ import 'leaflet-draw';
 import 'leaflet-draw/dist/leaflet.draw.css';
 
 interface DrawingControlProps {
-  onDrawComplete?: (geoJSON: any) => void;
+  onDrawComplete?: (layer: L.Layer) => void;
   isDrawingMode: boolean;
 }
 
@@ -17,77 +18,73 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
   const drawControlRef = useRef<L.Control.Draw | null>(null);
   const drawnItemsRef = useRef(new L.FeatureGroup());
   
-  // Initial setup
   useEffect(() => {
     map.addLayer(drawnItemsRef.current);
     
-    // Event handlers for drawing
-    map.on(L.Draw.Event.CREATED, (event) => {
-      const layer = event.layer;
+    const handleDrawCreated = (e: any) => {
+      const layer = e.layer;
       drawnItemsRef.current.addLayer(layer);
       
       if (onDrawComplete) {
-        const geoJSON = layer.toGeoJSON();
-        onDrawComplete(geoJSON);
+        onDrawComplete(layer);
       }
-    });
+    };
+
+    map.on('draw:created', handleDrawCreated);
 
     return () => {
       if (drawnItemsRef.current) {
         map.removeLayer(drawnItemsRef.current);
       }
-      // Clean up event listeners
-      map.off(L.Draw.Event.CREATED);
+      map.off('draw:created', handleDrawCreated);
     };
   }, [map, onDrawComplete]);
 
-  // Handle drawing mode changes
   useEffect(() => {
     if (isDrawingMode) {
-          if (!drawControlRef.current) {
-            // Initialize draw control if it doesn't exist
-            drawControlRef.current = new L.Control.Draw({
-              position: 'topleft',
-              draw: {
-                rectangle: false,
-                circle: false,
-                circlemarker: false,
-                marker: false,
-                polyline: {
-                  shapeOptions: {
-                    color: '#5F9EA0',
-                    weight: 3
-                  }
-                },
-                polygon: {
-                  allowIntersection: false,
-                  drawError: {
-                    color: '#e1e100',
-                    message: '<strong>Draw error!</strong> Polygons cannot intersect.'
-                  },
-                  shapeOptions: {
-                    color: '#5F9EA0',
-                    weight: 3
-                  }
-                }
-              },
-              edit: {
-                featureGroup: drawnItemsRef.current,
-                remove: true
+      if (!drawControlRef.current) {
+        const drawOptions: L.DrawConstructorOptions = {
+          position: 'topleft',
+          draw: {
+            rectangle: false,
+            circle: false,
+            circlemarker: false,
+            marker: false,
+            polyline: {
+              shapeOptions: {
+                color: '#5F9EA0',
+                weight: 3
               }
-            });
+            },
+            polygon: {
+              allowIntersection: false,
+              drawError: {
+                color: '#e1e100',
+                message: '<strong>Draw error!</strong> Polygons cannot intersect.'
+              },
+              shapeOptions: {
+                color: '#5F9EA0',
+                weight: 3
+              }
+            }
+          },
+          edit: {
+            featureGroup: drawnItemsRef.current,
+            remove: true
           }
+        };
 
-          map.addControl(drawControlRef.current);
+        drawControlRef.current = new L.Control.Draw(drawOptions);
+      }
 
-          // Start polygon drawing automatically
-          new L.Draw.Polygon(map, drawControlRef.current.options.draw.polygon).enable();
+      map.addControl(drawControlRef.current);
 
-        }
-    else if (drawControlRef.current) {
-            map.removeControl(drawControlRef.current);
-          }
+      // Start polygon drawing automatically
+      new L.Draw.Polygon(map).enable();
 
+    } else if (drawControlRef.current) {
+      map.removeControl(drawControlRef.current);
+    }
   }, [isDrawingMode, map]);
 
   return null;
