@@ -9,22 +9,20 @@ import {
   useMap,
   ScaleControl
 } from 'react-leaflet';
-import { LatLngBounds, LatLng } from 'leaflet';
+import L, { LatLngBounds, LatLng } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AlertCircle } from 'lucide-react';
 
 import Toolbar from '../components/common/ui/Toolbar';
 import LayerPanel from '../components/map/LayerPanel';
-import { Layer } from '../types/layer';
+import { Layer, Coordinate, latLngToCoordinate, PolygonData } from '../types/map';
 import DrawingControl from '../components/map/DrawingControl';
-import { GeoJSON } from 'geojson';
-
+import { MapMode } from '../types/toolbar';
 
 // Utility function to parse WKT polygon data
-const parseWKTPolygon = (wkt: string): [number, number][] => {
+const parseWKTPolygon = (wkt: string): Coordinate[] => {
   const coordsString = wkt
-    .replace('POLYGON ((', '')
-    .replace('))', '')
+    .replace(/POLYGON\s*\(\((.*)\)\)/i, '$1')
     .trim();
 
   return coordsString.split(', ').map(coord => {
@@ -35,7 +33,7 @@ const parseWKTPolygon = (wkt: string): [number, number][] => {
 
 // Component to handle map initialization and bounds
 const MapController: React.FC<{ 
-  coordinates: [number, number][];
+  coordinates: Coordinate[];
   onMapReady?: () => void;
 }> = ({ coordinates, onMapReady }) => {
   const map = useMap();
@@ -91,15 +89,13 @@ const GameMap: React.FC = () => {
   // State management
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [boundary, setBoundary] = useState<[number, number][]>([]);
+  const [boundary, setBoundary] = useState<Coordinate[]>([]);
   const [layers, setLayers] = useState<Layer[]>([]);
   const [activeLayer, setActiveLayer] = useState<string | null>(null);
-  const [activeZone, setActiveZone] = useState<'hide' | 'precision' | null>(null);
-  const [mapMode, setMapMode] = useState<'draw' | 'measure' | null>(null);
-  const [drawings, setDrawings] = useState<GeoJSON[]>([]);
+  const [mapMode, setMapMode] = useState<MapMode>(null);
 
   // Map center coordinates (Tel Aviv)
-  const defaultCenter: [number, number] = useMemo(() => [32.0700, 34.7674], []);
+  const defaultCenter: Coordinate = useMemo(() => [32.0700, 34.7674], []);
 
   // Handlers
   const handleMapReady = useCallback(() => {
@@ -111,7 +107,7 @@ const GameMap: React.FC = () => {
       id: `layer-${Date.now()}`,
       name: `Layer ${layers.length + 1}`,
       visible: true,
-      color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
+      color: `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`,
       type: 'polygon',
       data: null,
     };
@@ -138,41 +134,45 @@ const GameMap: React.FC = () => {
     ));
   }, []);
 
-  const handleReorderLayers = useCallback((startIndex: number, endIndex: number) => {
-    setLayers(prev => {
-      const result = Array.from(prev);
-      const [removed] = result.splice(startIndex, 1);
-      result.splice(endIndex, 0, removed);
-      return result;
-    });
-  }, []);
-
-  const handleDrawComplete = useCallback((geoJSON: GeoJSON) => {
-    setDrawings(prev => [...prev, geoJSON]);
-    // If you want to save the drawing to the active layer:
-    if (activeLayer) {
-      setLayers(prev => prev.map(layer => 
-        layer.id === activeLayer 
-          ? { ...layer, data: [...(layer.data || []), geoJSON] }
-          : layer
+  const handleDrawComplete = useCallback((layer: L.Layer) => {
+    if (activeLayer && layer instanceof L.Polygon) {
+      const latLngs = layer.getLatLngs()[0] as L.LatLng[];
+      const coordinates = latLngs.map(latLngToCoordinate);
+      
+      setLayers(prev => prev.map(prevLayer => 
+        prevLayer.id === activeLayer 
+          ? { ...prevLayer, data: [coordinates] }
+          : prevLayer
       ));
     }
   }, [activeLayer]);
+
+  const handleToolChange = useCallback((tool: MapMode) => {
+    setMapMode(tool);
+  }, []);
 
   // Load boundary data on mount
   useEffect(() => {
     const loadBoundary = async () => {
       try {
         const response = await fetch('/data/game-boundary.csv');
+        if (!response.ok) {
+          throw new Error('Failed to fetch boundary data');
+        }
         const text = await response.text();
         const lines = text.split('\n');
         if (lines.length >= 2) {
-          const wktData = lines[1].split('"')[1];
-          const coordinates = parseWKTPolygon(wktData);
-          setBoundary(coordinates);
+          const wktDataMatch = lines[1].match(/"([^"]+)"/);
+          if (wktDataMatch && wktDataMatch[1]) {
+            const coordinates = parseWKTPolygon(wktDataMatch[1]);
+            setBoundary(coordinates);
+          } else {
+            throw new Error('Invalid boundary data format');
+          }
         }
       } catch (err) {
-        setError('Failed to load game boundary. Please try refreshing the page.');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load game boundary';
+        setError(`${errorMessage}. Please try refreshing the page.`);
         setIsLoading(false);
       }
     };
@@ -185,9 +185,9 @@ const GameMap: React.FC = () => {
       {/* Toolbar */}
       <div className="flex-none w-full">
         <Toolbar
-            onToolChange={(tool) => setMapMode(prevMode => tool === prevMode ? null : tool)}
-            activeTool={mapMode}
-            disabled={isLoading || !!error}
+          onToolChange={handleToolChange}
+          activeTool={mapMode}
+          disabled={isLoading || !!error}
         />
       </div>
 
@@ -195,7 +195,7 @@ const GameMap: React.FC = () => {
       <div className="flex-1 flex overflow-hidden w-full">
         {/* Map Container */}
         <div className={`flex-1 relative w-full ${mapMode === 'draw' ? 'cursor-crosshair' : ''}`}>
-            {isLoading && <LoadingOverlay />}
+          {isLoading && <LoadingOverlay />}
           {error && <ErrorAlert message={error} />}
           
           <MapContainer
@@ -248,10 +248,10 @@ const GameMap: React.FC = () => {
 
               {/* User Layers */}
               {layers.map(layer => 
-                layer.visible && layer.type === 'polygon' ? (
+                layer.visible && layer.type === 'polygon' && layer.data ? (
                   <Polygon
                     key={layer.id}
-                    positions={layer.data || boundary}
+                    positions={layer.data}
                     pathOptions={{
                       color: layer.color,
                       weight: 3,
@@ -262,9 +262,11 @@ const GameMap: React.FC = () => {
                 ) : null
               )}
             </LayersControl>
+
+            {/* Drawing Control */}
             <DrawingControl 
-                onDrawComplete={handleDrawComplete} 
-                isDrawingMode={mapMode === 'draw'}
+              onDrawComplete={handleDrawComplete}
+              isDrawingMode={mapMode === 'draw'}
             />
           </MapContainer>
         </div>
@@ -277,7 +279,6 @@ const GameMap: React.FC = () => {
             onDeleteLayer={handleDeleteLayer}
             onToggleLayer={handleToggleLayer}
             onRenameLayer={handleRenameLayer}
-            onReorderLayers={handleReorderLayers}
             activeLayer={activeLayer}
             setActiveLayer={setActiveLayer}
           />

@@ -1,7 +1,7 @@
 // src/components/map/LayerPanel.tsx
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Plus, Trash2, Eye, EyeOff, Edit2, GripHorizontal } from 'lucide-react';
-import { Layer } from '../../types/layer';
+import { Layer } from '../../types/map';
 
 interface LayerPanelProps {
   layers: Layer[];
@@ -9,7 +9,6 @@ interface LayerPanelProps {
   onDeleteLayer: (id: string) => void;
   onToggleLayer: (id: string) => void;
   onRenameLayer: (id: string, name: string) => void;
-  onReorderLayers?: (startIndex: number, endIndex: number) => void;
   activeLayer: string | null;
   setActiveLayer: (id: string | null) => void;
 }
@@ -33,10 +32,10 @@ const LayerItem: React.FC<{
   isEditing,
   setEditing
 }) => {
-  const handleClick = useCallback((e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClick();
-  }, [onClick]);
+  };
 
   return (
     <div
@@ -53,7 +52,7 @@ const LayerItem: React.FC<{
     >
       <div className="flex items-center gap-3">
         <div className="flex-shrink-0 cursor-grab">
-          <GripHorizontal size={16} className="text-gray-400" />
+          <GripHorizontal className="text-gray-400" size={16} />
         </div>
         
         <div className="flex-grow min-w-0">
@@ -119,7 +118,6 @@ const LayerPanel: React.FC<LayerPanelProps> = ({
   onDeleteLayer,
   onToggleLayer,
   onRenameLayer,
-  onReorderLayers,
   activeLayer,
   setActiveLayer,
 }) => {
@@ -127,7 +125,6 @@ const LayerPanel: React.FC<LayerPanelProps> = ({
 
   return (
     <div className="h-full flex flex-col bg-jl-cream">
-      {/* Header */}
       <div className="flex-none p-4 border-b border-jl-sage/30 bg-jl-cream">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-display font-bold text-jl-teal">Layers</h3>
@@ -141,7 +138,6 @@ const LayerPanel: React.FC<LayerPanelProps> = ({
         </div>
       </div>
 
-      {/* Layer List */}
       <div className="flex-1 min-h-0 p-4 overflow-y-auto">
         <div className="space-y-2">
           {layers.map((layer) => (
@@ -159,22 +155,6 @@ const LayerPanel: React.FC<LayerPanelProps> = ({
           ))}
         </div>
       </div>
-
-      {/* Drawing Tools */}
-      {activeLayer && (
-        <div className="flex-none p-4 bg-white border-t border-gray-200">
-          <h4 className="text-sm font-semibold text-gray-700 mb-3">Drawing Tools</h4>
-          <div className="grid grid-cols-4 gap-2">
-            {/* Placeholder for drawing tool buttons */}
-            {[1, 2, 3, 4].map((i) => (
-              <button
-                key={i}
-                className="h-8 rounded bg-gray-100 hover:bg-gray-200 transition-colors"
-              />
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

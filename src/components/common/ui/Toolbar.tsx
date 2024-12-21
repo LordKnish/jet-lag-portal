@@ -15,13 +15,14 @@ import {
   MapPin,
   Hash
 } from "@phosphor-icons/react";
+import { MapMode } from '../../../types/toolbar';
 
 interface ToolbarProps {
-  onToolChange?: (tool: string) => void;
+  onToolChange?: (tool: MapMode) => void;
   onFillStyleChange?: (style: 'solid' | 'hashed') => void;
   onUndo?: () => void;
   onRedo?: () => void;
-  activeTool?: string;
+  activeTool?: MapMode | null;
   disabled?: boolean;
 }
 
@@ -64,7 +65,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
     <div className="w-full bg-jl-teal border-b border-jl-sage/30 shadow-md">
       <div className="w-full">
         <div className="flex items-center h-14 gap-1 px-2">
-          {/* Drawing Tools Group */}
           <div className="flex items-center gap-1 pr-3 border-r border-jl-sage/30">
             <ToolButton
               icon={<Hand weight="fill" />}
@@ -89,7 +89,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
             />
           </div>
 
-          {/* Shape Tools Group */}
           <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
             <ToolButton
               icon={<Circle size={24} weight="duotone" />}
@@ -114,31 +113,29 @@ const Toolbar: React.FC<ToolbarProps> = ({
             />
           </div>
 
-          {/* Fill Tools Group */}
           <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
             <ToolButton
               icon={<PaintBucket size={24} weight="duotone" />}
-              label="Solid Fill"
+              label="Fill"
               onClick={() => {
                 onToolChange?.('fill');
                 onFillStyleChange?.('solid');
               }}
-              active={activeTool === 'fill-solid'}
+              active={activeTool === 'fill'}
               disabled={disabled}
             />
             <ToolButton
               icon={<Hash size={24} weight="duotone" />}
-              label="Hashed Fill (Uncertain Area)"
+              label="Hashed Fill"
               onClick={() => {
                 onToolChange?.('fill');
                 onFillStyleChange?.('hashed');
               }}
-              active={activeTool === 'fill-hashed'}
+              active={activeTool === 'fill'}
               disabled={disabled}
             />
           </div>
 
-          {/* Measurement Tools Group */}
           <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
             <ToolButton
               icon={<Ruler size={24} weight="duotone" />}
@@ -163,7 +160,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
             />
           </div>
 
-          {/* History Controls Group */}
           <div className="flex items-center gap-1 ml-auto">
             <ToolButton
               icon={<ArrowCounterClockwise size={24} weight="duotone" />}
