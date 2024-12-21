@@ -20,31 +20,37 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
     const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
 
-    const drawControl = new L.Control.Draw({
+    const drawOptions: L.Control.DrawConstructorOptions = {
       draw: {
-        marker: false,
-        circlemarker: false,
-        circle: false,
         polyline: false,
+        polygon: {
+          allowIntersection: false,
+          drawError: {
+            color: '#e1e4e8',
+            message: '<strong>Cannot intersect lines!</strong>'
+          },
+          shapeOptions: {
+            color: '#5F9EA0',
+            weight: 3
+          }
+        },
         rectangle: {
           shapeOptions: {
             color: '#5F9EA0',
             weight: 3
           }
         },
-        polygon: {
-          allowIntersection: false,
-          showArea: true,
-          shapeOptions: {
-            color: '#5F9EA0',
-            weight: 3
-          }
-        }
+        circle: false,
+        circlemarker: false,
+        marker: false
       },
       edit: {
-        featureGroup: drawnItems
+        featureGroup: drawnItems,
+        remove: true
       }
-    } as L.Control.DrawConstructorOptions);
+    };
+
+    const drawControl = new L.Control.Draw(drawOptions);
 
     if (isDrawingMode) {
       map.addControl(drawControl);

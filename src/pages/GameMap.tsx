@@ -12,7 +12,8 @@ import {
 import { LatLngBounds, LatLng } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AlertCircle } from 'lucide-react';
-import { LatLngTuple } from 'leaflet';
+import type { Layer as LeafletLayer, LatLngTuple } from 'leaflet';
+
 import Toolbar from '../components/common/ui/Toolbar';
 import LayerPanel from '../components/map/LayerPanel';
 import { Layer } from '../types/map';
@@ -22,8 +23,7 @@ import { MapMode } from '../types/toolbar';
 // Utility function to parse WKT polygon data
 const parseWKTPolygon = (wkt: string): [number, number][] => {
   const coordsString = wkt
-    .replace('POLYGON ((', '')
-    .replace('))', '')
+    .replace(/POLYGON\s*\(\((.*)\)\)/i, '$1')
     .trim();
 
   return coordsString.split(', ').map(coord => {
@@ -108,7 +108,7 @@ const GameMap: React.FC = () => {
       id: `layer-${Date.now()}`,
       name: `Layer ${layers.length + 1}`,
       visible: true,
-      color: `#${Math.floor(Math.random()*16777215).toString(16)}`,
+      color: `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`,
       type: 'polygon',
       data: null,
     };
@@ -135,7 +135,7 @@ const GameMap: React.FC = () => {
     ));
   }, []);
 
-  const handleDrawComplete = useCallback((layer: L.Layer) => {
+  const handleDrawComplete = useCallback((layer: LeafletLayer) => {
     if (activeLayer && layer instanceof L.Polygon) {
       const coords = layer.getLatLngs()[0] as L.LatLng[];
       const coordsArray = coords.map(latLng => [latLng.lat, latLng.lng] as LatLngTuple);
@@ -149,7 +149,7 @@ const GameMap: React.FC = () => {
   }, [activeLayer]);
 
   const handleToolChange = useCallback((tool: MapMode) => {
-    setMapMode(prev => prev === tool ? null : tool);
+    setMapMode(tool);
   }, []);
 
   // Load boundary data on mount
@@ -157,15 +157,23 @@ const GameMap: React.FC = () => {
     const loadBoundary = async () => {
       try {
         const response = await fetch('/data/game-boundary.csv');
+        if (!response.ok) {
+          throw new Error('Failed to fetch boundary data');
+        }
         const text = await response.text();
         const lines = text.split('\n');
         if (lines.length >= 2) {
-          const wktData = lines[1].split('"')[1];
-          const coordinates = parseWKTPolygon(wktData);
-          setBoundary(coordinates);
+          const wktDataMatch = lines[1].match(/"([^"]+)"/);
+          if (wktDataMatch && wktDataMatch[1]) {
+            const coordinates = parseWKTPolygon(wktDataMatch[1]);
+            setBoundary(coordinates);
+          } else {
+            throw new Error('Invalid boundary data format');
+          }
         }
       } catch (err) {
-        setError('Failed to load game boundary. Please try refreshing the page.');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load game boundary';
+        setError(`${errorMessage}. Please try refreshing the page.`);
         setIsLoading(false);
       }
     };
@@ -178,10 +186,10 @@ const GameMap: React.FC = () => {
       {/* Toolbar */}
       <div className="flex-none w-full">
         <Toolbar
-            onToolChange={handleToolChange}
-            activeTool={mapMode}
-            disabled={isLoading || !!error}
-            />
+          onToolChange={handleToolChange}
+          activeTool={mapMode}
+          disabled={isLoading || !!error}
+        />
       </div>
 
       {/* Main Content */}
@@ -242,18 +250,18 @@ const GameMap: React.FC = () => {
               {/* User Layers */}
               {layers.map(layer => 
                 layer.visible && layer.type === 'polygon' && layer.data ? (
-                    <Polygon
+                  <Polygon
                     key={layer.id}
                     positions={layer.data}
                     pathOptions={{
-                        color: layer.color,
-                        weight: 3,
-                        fillOpacity: 0.2,
-                        opacity: 1,
+                      color: layer.color,
+                      weight: 3,
+                      fillOpacity: 0.2,
+                      opacity: 1,
                     }}
-                    />
+                  />
                 ) : null
-                )}
+              )}
             </LayersControl>
 
             {/* Drawing Control */}

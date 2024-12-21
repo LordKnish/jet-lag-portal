@@ -1,14 +1,15 @@
 // src/types/map.ts
 import type { LatLngExpression, Map as LeafletMap } from 'leaflet';
 
+// src/types/map.ts
 export interface Layer {
-  id: string;
-  name: string;
-  visible: boolean;
-  color: string;
-  type: 'polygon';
-  data: LatLngExpression[][] | null;
-}
+    id: string;
+    name: string;
+    visible: boolean;
+    color: string;
+    type: 'polygon';
+    data: [number, number][][] | null;
+  }
 
 declare global {
     namespace L {
