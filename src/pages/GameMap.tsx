@@ -9,19 +9,18 @@ import {
   useMap,
   ScaleControl
 } from 'react-leaflet';
-import { LatLngBounds, LatLng } from 'leaflet';
+import L, { LatLngBounds, LatLng } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AlertCircle } from 'lucide-react';
-import type { Layer as LeafletLayer, LatLngTuple } from 'leaflet';
 
 import Toolbar from '../components/common/ui/Toolbar';
 import LayerPanel from '../components/map/LayerPanel';
-import { Layer } from '../types/map';
+import { Layer, Coordinate, latLngToCoordinate, PolygonData } from '../types/map';
 import DrawingControl from '../components/map/DrawingControl';
 import { MapMode } from '../types/toolbar';
 
 // Utility function to parse WKT polygon data
-const parseWKTPolygon = (wkt: string): [number, number][] => {
+const parseWKTPolygon = (wkt: string): Coordinate[] => {
   const coordsString = wkt
     .replace(/POLYGON\s*\(\((.*)\)\)/i, '$1')
     .trim();
@@ -34,7 +33,7 @@ const parseWKTPolygon = (wkt: string): [number, number][] => {
 
 // Component to handle map initialization and bounds
 const MapController: React.FC<{ 
-  coordinates: [number, number][];
+  coordinates: Coordinate[];
   onMapReady?: () => void;
 }> = ({ coordinates, onMapReady }) => {
   const map = useMap();
@@ -90,13 +89,13 @@ const GameMap: React.FC = () => {
   // State management
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [boundary, setBoundary] = useState<[number, number][]>([]);
+  const [boundary, setBoundary] = useState<Coordinate[]>([]);
   const [layers, setLayers] = useState<Layer[]>([]);
   const [activeLayer, setActiveLayer] = useState<string | null>(null);
   const [mapMode, setMapMode] = useState<MapMode>(null);
 
   // Map center coordinates (Tel Aviv)
-  const defaultCenter: [number, number] = useMemo(() => [32.0700, 34.7674], []);
+  const defaultCenter: Coordinate = useMemo(() => [32.0700, 34.7674], []);
 
   // Handlers
   const handleMapReady = useCallback(() => {
@@ -138,7 +137,7 @@ const GameMap: React.FC = () => {
   const handleDrawComplete = useCallback((layer: L.Layer) => {
     if (activeLayer && layer instanceof L.Polygon) {
       const latLngs = layer.getLatLngs()[0] as L.LatLng[];
-      const coordinates: Coordinate[] = latLngs.map(latLngToCoordinate);
+      const coordinates = latLngs.map(latLngToCoordinate);
       
       setLayers(prev => prev.map(prevLayer => 
         prevLayer.id === activeLayer 
