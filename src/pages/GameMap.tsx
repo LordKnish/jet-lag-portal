@@ -145,11 +145,12 @@ const GameMap: React.FC = () => {
     });
   }, []);
 
-  const handleDrawComplete = useCallback((geoJSON: GeoJSON) => {
+  const handleDrawComplete = useCallback((layer: L.Layer) => {
     if (activeLayer) {
+      const coords = (layer as L.Polygon).getLatLngs();
       setLayers(prev => prev.map(layer => 
         layer.id === activeLayer 
-          ? { ...layer, data: [...(layer.data || []), geoJSON] }
+          ? { ...layer, data: [coords] }
           : layer
       ));
     }
@@ -185,10 +186,10 @@ const GameMap: React.FC = () => {
       {/* Toolbar */}
       <div className="flex-none w-full">
         <Toolbar
-          onToolChange={handleToolChange}
-          activeTool={mapMode}
-          disabled={isLoading || !!error}
-        />
+            onToolChange={handleToolChange}
+            activeTool={mapMode}
+            disabled={isLoading || !!error}
+            />
       </div>
 
       {/* Main Content */}
@@ -248,19 +249,19 @@ const GameMap: React.FC = () => {
 
               {/* User Layers */}
               {layers.map(layer => 
-                layer.visible && layer.type === 'polygon' ? (
-                  <Polygon
+                layer.visible && layer.type === 'polygon' && layer.data ? (
+                    <Polygon
                     key={layer.id}
-                    positions={layer.data || boundary}
+                    positions={layer.data}
                     pathOptions={{
-                      color: layer.color,
-                      weight: 3,
-                      fillOpacity: 0.2,
-                      opacity: 1,
+                        color: layer.color,
+                        weight: 3,
+                        fillOpacity: 0.2,
+                        opacity: 1,
                     }}
-                  />
+                    />
                 ) : null
-              )}
+                )}
             </LayersControl>
 
             {/* Drawing Control */}

@@ -1,51 +1,5 @@
 // src/types/map.ts
-import { Map as LeafletMap, FeatureGroup, DrawEvents } from 'leaflet';
-import { GeoJSON } from 'geojson';
-
-declare module 'leaflet' {
-  namespace Control {
-    interface DrawConstructorOptions {
-      position?: string;
-      draw?: {
-        polyline?: any;
-        polygon?: {
-          allowIntersection?: boolean;
-          drawError?: {
-            color: string;
-            message: string;
-          };
-          shapeOptions?: {
-            color: string;
-            weight: number;
-          };
-        };
-        rectangle?: boolean;
-        circle?: boolean;
-        circlemarker?: boolean;
-        marker?: boolean;
-      };
-      edit?: {
-        featureGroup: FeatureGroup;
-        remove?: boolean;
-      };
-    }
-
-    class Draw extends Control {
-      constructor(options: DrawConstructorOptions);
-    }
-  }
-
-  namespace Draw {
-    namespace Event {
-      const CREATED: DrawEvents.Created;
-    }
-
-    class Polygon {
-      constructor(map: LeafletMap, options?: any);
-      enable(): void;
-    }
-  }
-}
+import { LatLngExpression } from 'leaflet';
 
 export interface Layer {
   id: string;
@@ -53,5 +7,40 @@ export interface Layer {
   visible: boolean;
   color: string;
   type: 'polygon';
-  data: GeoJSON[] | null;
+  data: LatLngExpression[][] | null;
+}
+
+declare module 'leaflet' {
+  interface DrawOptions {
+    polyline?: any;
+    polygon?: {
+      allowIntersection?: boolean;
+      drawError?: {
+        color: string;
+        message: string;
+      };
+      shapeOptions?: {
+        color: string;
+        weight: number;
+      };
+    };
+    rectangle?: boolean;
+    circle?: boolean;
+    circlemarker?: boolean;
+    marker?: boolean;
+  }
+
+  interface DrawControlOptions extends L.ControlOptions {
+    draw?: DrawOptions;
+    edit?: {
+      featureGroup: L.FeatureGroup;
+      remove?: boolean;
+    };
+  }
+
+  namespace Control {
+    class Draw extends L.Control {
+      constructor(options: DrawControlOptions);
+    }
+  }
 }

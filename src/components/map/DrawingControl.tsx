@@ -4,10 +4,9 @@ import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-draw';
 import 'leaflet-draw/dist/leaflet.draw.css';
-import { GeoJSON } from 'geojson';
 
 interface DrawingControlProps {
-  onDrawComplete?: (geoJSON: GeoJSON) => void;
+  onDrawComplete?: (layer: L.Layer) => void;
   isDrawingMode: boolean;
 }
 
@@ -22,30 +21,29 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
   useEffect(() => {
     map.addLayer(drawnItemsRef.current);
     
-    const handleDrawCreated = (event: L.DrawEvents.Created) => {
-      const layer = event.layer;
+    const handleDrawCreated = (e: any) => {
+      const layer = e.layer;
       drawnItemsRef.current.addLayer(layer);
       
-      if (onDrawComplete && 'toGeoJSON' in layer) {
-        const geoJSON = layer.toGeoJSON();
-        onDrawComplete(geoJSON);
+      if (onDrawComplete) {
+        onDrawComplete(layer);
       }
     };
 
-    map.on(L.Draw.Event.CREATED, handleDrawCreated);
+    map.on('draw:created', handleDrawCreated);
 
     return () => {
       if (drawnItemsRef.current) {
         map.removeLayer(drawnItemsRef.current);
       }
-      map.off(L.Draw.Event.CREATED, handleDrawCreated);
+      map.off('draw:created', handleDrawCreated);
     };
   }, [map, onDrawComplete]);
 
   useEffect(() => {
     if (isDrawingMode) {
       if (!drawControlRef.current) {
-        drawControlRef.current = new L.Control.Draw({
+        const drawOptions: L.DrawControlOptions = {
           position: 'topleft',
           draw: {
             rectangle: false,
@@ -74,13 +72,16 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
             featureGroup: drawnItemsRef.current,
             remove: true
           }
-        });
+        };
+
+        drawControlRef.current = new L.Control.Draw(drawOptions);
       }
 
       map.addControl(drawControlRef.current);
 
       // Start polygon drawing automatically
-      new L.Draw.Polygon(map, drawControlRef.current.options.draw?.polygon).enable();
+      const polygonDrawer = new L.Draw.Polygon(map);
+      polygonDrawer.enable();
     } else if (drawControlRef.current) {
       map.removeControl(drawControlRef.current);
     }
