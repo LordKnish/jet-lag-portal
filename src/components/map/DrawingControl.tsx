@@ -56,8 +56,8 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
       map.addControl(drawControl);
     }
 
-    const handleDrawCreated = (e: L.DrawEvents.Created) => {
-      const layer = e.layer;
+    const handleDrawCreated = (event: any) => {
+      const layer = event.layer;
       drawnItems.addLayer(layer);
       
       if (onDrawComplete) {
@@ -65,14 +65,15 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
       }
     };
 
-    map.on(L.Draw.Event.CREATED, handleDrawCreated);
+    // Using string literal for event name to avoid type issues
+    map.on('draw:created', handleDrawCreated);
 
     return () => {
       map.removeLayer(drawnItems);
       if (isDrawingMode) {
         map.removeControl(drawControl);
       }
-      map.off(L.Draw.Event.CREATED, handleDrawCreated);
+      map.off('draw:created', handleDrawCreated);
     };
   }, [map, onDrawComplete, isDrawingMode]);
 

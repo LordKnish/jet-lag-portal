@@ -135,14 +135,14 @@ const GameMap: React.FC = () => {
     ));
   }, []);
 
-  const handleDrawComplete = useCallback((layer: LeafletLayer) => {
+  const handleDrawComplete = useCallback((layer: L.Layer) => {
     if (activeLayer && layer instanceof L.Polygon) {
-      const coords = layer.getLatLngs()[0] as L.LatLng[];
-      const coordsArray = coords.map(latLng => [latLng.lat, latLng.lng] as LatLngTuple);
+      const latLngs = layer.getLatLngs()[0] as L.LatLng[];
+      const coordinates: Coordinate[] = latLngs.map(latLngToCoordinate);
       
       setLayers(prev => prev.map(prevLayer => 
         prevLayer.id === activeLayer 
-          ? { ...prevLayer, data: [coordsArray] }
+          ? { ...prevLayer, data: [coordinates] }
           : prevLayer
       ));
     }
