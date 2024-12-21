@@ -3,7 +3,8 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { 
   MapContainer, 
   TileLayer, 
-  Polygon, 
+  Polygon,
+  Circle, 
   LayersControl,
   ZoomControl,
   useMap,
@@ -15,8 +16,9 @@ import { AlertCircle } from 'lucide-react';
 
 import Toolbar from '../components/common/ui/Toolbar';
 import LayerPanel from '../components/map/LayerPanel';
-import { Layer, Coordinate, latLngToCoordinate, PolygonData } from '../types/map';
 import DrawingControl from '../components/map/DrawingControl';
+import CircleDrawingControl from '../components/map/CircleDrawingControl';
+import { Layer, Coordinate, latLngToCoordinate, PolygonData, CircleData } from '../types/map';
 import { MapMode } from '../types/toolbar';
 
 // Utility function to parse WKT polygon data
@@ -90,9 +92,17 @@ const GameMap: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [boundary, setBoundary] = useState<Coordinate[]>([]);
-  const [layers, setLayers] = useState<Layer[]>([]);
-  const [activeLayer, setActiveLayer] = useState<string | null>(null);
+  const [layers, setLayers] = useState<Layer[]>([{
+    id: 'default-layer',
+    name: 'Initial Layer',
+    visible: true,
+    color: '#5F9EA0',  // Using the teal color to match the theme
+    type: 'polygon',
+    data: null,
+  }]);
+  const [activeLayer, setActiveLayer] = useState<string | null>('default-layer');
   const [mapMode, setMapMode] = useState<MapMode>(null);
+  const [fillStyle, setFillStyle] = useState<'solid' | 'hashed'>('solid');
 
   // Map center coordinates (Tel Aviv)
   const defaultCenter: Coordinate = useMemo(() => [32.0700, 34.7674], []);
@@ -141,14 +151,33 @@ const GameMap: React.FC = () => {
       
       setLayers(prev => prev.map(prevLayer => 
         prevLayer.id === activeLayer 
-          ? { ...prevLayer, data: [coordinates] }
+          ? { ...prevLayer, data: [coordinates], type: 'polygon' }
           : prevLayer
+      ));
+    }
+  }, [activeLayer]);
+
+  const handleCircleComplete = useCallback((center: L.LatLng, radiusMeters: number) => {
+    if (activeLayer) {
+      const circleData: CircleData = {
+        center: latLngToCoordinate(center),
+        radius: radiusMeters
+      };
+      
+      setLayers(prev => prev.map(layer => 
+        layer.id === activeLayer 
+          ? { ...layer, data: circleData, type: 'circle' }
+          : layer
       ));
     }
   }, [activeLayer]);
 
   const handleToolChange = useCallback((tool: MapMode) => {
     setMapMode(tool);
+  }, []);
+
+  const handleFillStyleChange = useCallback((style: 'solid' | 'hashed') => {
+    setFillStyle(style);
   }, []);
 
   // Load boundary data on mount
@@ -186,6 +215,7 @@ const GameMap: React.FC = () => {
       <div className="flex-none w-full">
         <Toolbar
           onToolChange={handleToolChange}
+          onFillStyleChange={handleFillStyleChange}
           activeTool={mapMode}
           disabled={isLoading || !!error}
         />
@@ -247,26 +277,55 @@ const GameMap: React.FC = () => {
               )}
 
               {/* User Layers */}
-              {layers.map(layer => 
-                layer.visible && layer.type === 'polygon' && layer.data ? (
-                  <Polygon
-                    key={layer.id}
-                    positions={layer.data}
-                    pathOptions={{
-                      color: layer.color,
-                      weight: 3,
-                      fillOpacity: 0.2,
-                      opacity: 1,
-                    }}
-                  />
-                ) : null
-              )}
+              {layers.map(layer => {
+                if (!layer.visible || !layer.data) return null;
+
+                if (layer.type === 'polygon' && Array.isArray(layer.data)) {
+                  return (
+                    <Polygon
+                      key={layer.id}
+                      positions={layer.data}
+                      pathOptions={{
+                        color: layer.color,
+                        weight: 3,
+                        fillOpacity: 0.2,
+                        opacity: 1,
+                        dashArray: fillStyle === 'hashed' ? '5, 5' : undefined,
+                      }}
+                    />
+                  );
+                } 
+                
+                if (layer.type === 'circle' && !Array.isArray(layer.data)) {
+                  const circleData = layer.data as CircleData;
+                  return (
+                    <Circle
+                      key={layer.id}
+                      center={circleData.center}
+                      radius={circleData.radius}
+                      pathOptions={{
+                        color: layer.color,
+                        weight: 3,
+                        fillOpacity: 0.2,
+                        opacity: 1,
+                        dashArray: fillStyle === 'hashed' ? '5, 5' : undefined,
+                      }}
+                    />
+                  );
+                }
+
+                return null;
+              })}
             </LayersControl>
 
-            {/* Drawing Control */}
+            {/* Drawing Controls */}
             <DrawingControl 
               onDrawComplete={handleDrawComplete}
               isDrawingMode={mapMode === 'draw'}
+            />
+            <CircleDrawingControl 
+              onCircleComplete={handleCircleComplete}
+              isEnabled={mapMode === 'circle'}
             />
           </MapContainer>
         </div>

@@ -22,7 +22,7 @@ interface ToolbarProps {
   onFillStyleChange?: (style: 'solid' | 'hashed') => void;
   onUndo?: () => void;
   onRedo?: () => void;
-  activeTool?: MapMode | null;
+  activeTool?: MapMode;
   disabled?: boolean;
 }
 
@@ -65,6 +65,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     <div className="w-full bg-jl-teal border-b border-jl-sage/30 shadow-md">
       <div className="w-full">
         <div className="flex items-center h-14 gap-1 px-2">
+          {/* Navigation Tools Group */}
           <div className="flex items-center gap-1 pr-3 border-r border-jl-sage/30">
             <ToolButton
               icon={<Hand weight="fill" />}
@@ -73,11 +74,29 @@ const Toolbar: React.FC<ToolbarProps> = ({
               active={activeTool === 'pan'}
               disabled={disabled}
             />
+          </div>
+
+          {/* Drawing Tools Group */}
+          <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
             <ToolButton
               icon={<Pencil weight="fill" />}
               label="Free Draw"
               onClick={() => onToolChange?.('draw')}
               active={activeTool === 'draw'}
+              disabled={disabled}
+            />
+            <ToolButton
+              icon={<Circle size={24} weight="duotone" />}
+              label="Draw Circle"
+              onClick={() => onToolChange?.('circle')}
+              active={activeTool === 'circle'}
+              disabled={disabled}
+            />
+            <ToolButton
+              icon={<Square size={24} weight="duotone" />}
+              label="Draw Rectangle"
+              onClick={() => onToolChange?.('rectangle')}
+              active={activeTool === 'rectangle'}
               disabled={disabled}
             />
             <ToolButton
@@ -89,21 +108,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
             />
           </div>
 
+          {/* Shape Manipulation Tools */}
           <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
-            <ToolButton
-              icon={<Circle size={24} weight="duotone" />}
-              label="Radar Circle"
-              onClick={() => onToolChange?.('radar')}
-              active={activeTool === 'radar'}
-              disabled={disabled}
-            />
-            <ToolButton
-              icon={<Square size={24} weight="duotone" />}
-              label="Rectangle"
-              onClick={() => onToolChange?.('rectangle')}
-              active={activeTool === 'rectangle'}
-              disabled={disabled}
-            />
             <ToolButton
               icon={<SelectionAll size={24} weight="duotone" />}
               label="Selection"
@@ -111,9 +117,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
               active={activeTool === 'select'}
               disabled={disabled}
             />
-          </div>
-
-          <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
             <ToolButton
               icon={<PaintBucket size={24} weight="duotone" />}
               label="Fill"
@@ -131,15 +134,16 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 onToolChange?.('fill');
                 onFillStyleChange?.('hashed');
               }}
-              active={activeTool === 'fill'}
+              active={activeTool === 'fill-hashed'}
               disabled={disabled}
             />
           </div>
 
+          {/* Measurement Tools */}
           <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
             <ToolButton
               icon={<Ruler size={24} weight="duotone" />}
-              label="Measure"
+              label="Measure Distance"
               onClick={() => onToolChange?.('measure')}
               active={activeTool === 'measure'}
               disabled={disabled}
@@ -160,6 +164,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
             />
           </div>
 
+          {/* History Controls */}
           <div className="flex items-center gap-1 ml-auto">
             <ToolButton
               icon={<ArrowCounterClockwise size={24} weight="duotone" />}
