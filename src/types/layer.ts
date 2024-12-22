@@ -4,7 +4,7 @@ export interface Layer {
     name: string;
     visible: boolean;
     color: string;
-    type: 'polygon' | 'marker' | 'circle';
+    type: 'polygon' | 'marker' | 'circle' | 'rectangle';
     data: any; // Replace `any` with more specific types as needed
   }
   

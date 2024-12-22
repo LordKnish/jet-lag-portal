@@ -18,7 +18,7 @@ import Toolbar from '../components/common/ui/Toolbar';
 import LayerPanel from '../components/map/LayerPanel';
 import DrawingControl from '../components/map/DrawingControl';
 import CircleDrawingControl from '../components/map/CircleDrawingControl';
-import { Layer, Coordinate, latLngToCoordinate, PolygonData, CircleData } from '../types/map';
+import { Layer, Coordinate, latLngToCoordinate, PolygonData, CircleData, RectangleData } from '../types/map';
 import { MapMode } from '../types/toolbar';
 
 // Utility function to parse WKT polygon data
@@ -181,22 +181,28 @@ const GameMap: React.FC = () => {
     }
   }, [activeLayer]);
 
-  const handleRectangleComplete = useCallback((bounds: L.LatLngBounds) => {
-    if (activeLayer) {
-      const coordinates = [
-        [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
-        [bounds.getNorthWest().lat, bounds.getNorthWest().lng],
-        [bounds.getNorthEast().lat, bounds.getNorthEast().lng],
-        [bounds.getSouthEast().lat, bounds.getSouthEast().lng],
-      ];
-      
-      setLayers(prev => prev.map(layer => 
-        layer.id === activeLayer 
-          ? { ...layer, data: coordinates, type: 'rectangle' }
-          : layer
-      ));
-    }
-  }, [activeLayer]);
+  const handleRectangleComplete = useCallback(
+    (bounds: LatLngBounds) => {
+      if (activeLayer) {
+        // Ensure the data format matches RectangleData ([number, number][])
+        const rectangleData: RectangleData = [
+          [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
+          [bounds.getNorthWest().lat, bounds.getNorthWest().lng],
+          [bounds.getNorthEast().lat, bounds.getNorthEast().lng],
+          [bounds.getSouthEast().lat, bounds.getSouthEast().lng],
+        ];
+  
+        setLayers((prev) =>
+          prev.map((l) =>
+            l.id === activeLayer
+              ? { ...l, data: rectangleData, type: "rectangle" }
+              : l
+          )
+        );
+      }
+    },
+    [activeLayer]
+  );
 
   const handleToolChange = useCallback((tool: MapMode) => {
     setMapMode(tool);
