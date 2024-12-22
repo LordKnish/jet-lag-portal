@@ -33,6 +33,7 @@ const parseWKTPolygon = (wkt: string): Coordinate[] => {
   });
 };
 
+
 // Component to handle map initialization and bounds
 const MapController: React.FC<{ 
   coordinates: Coordinate[];
@@ -125,6 +126,14 @@ const GameMap: React.FC = () => {
     setActiveLayer(newLayer.id);
   }, [layers.length]);
 
+  const handleChangeLayerColor = (id: string, color: string) => {
+    setLayers(prevLayers =>
+      prevLayers.map(layer =>
+        layer.id === id ? { ...layer, color } : layer
+      )
+    );
+  };
+  
   const handleDeleteLayer = useCallback((id: string) => {
     setLayers(prev => prev.filter(layer => layer.id !== id));
     if (activeLayer === id) {
@@ -322,11 +331,12 @@ const GameMap: React.FC = () => {
             <DrawingControl 
               onDrawComplete={handleDrawComplete}
               isDrawingMode={mapMode === 'draw'}
+              boundary={boundary} 
             />
             <CircleDrawingControl 
               onCircleComplete={handleCircleComplete}
               isEnabled={mapMode === 'circle'}
-              boundary={boundary}  // Add this line
+              boundary={boundary} 
             />
           </MapContainer>
         </div>
@@ -339,6 +349,7 @@ const GameMap: React.FC = () => {
             onDeleteLayer={handleDeleteLayer}
             onToggleLayer={handleToggleLayer}
             onRenameLayer={handleRenameLayer}
+            onChangeLayerColor={handleChangeLayerColor} // <-- Add this line
             activeLayer={activeLayer}
             setActiveLayer={setActiveLayer}
           />
