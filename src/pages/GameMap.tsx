@@ -1,28 +1,26 @@
 // src/pages/GameMap.tsx
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { 
   MapContainer, 
   TileLayer, 
   Polygon,
   Circle, 
-  LayersControl,
   ZoomControl,
   useMap,
-  ScaleControl
+  ScaleControl,
+  FeatureGroup
 } from 'react-leaflet';
-import L, { LatLngBounds, LatLng } from 'leaflet';
+import L, { LatLngBounds, LatLng, LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AlertCircle } from 'lucide-react';
 import SquareDrawingControl from '../components/map/SquareDrawingControl';
 import Toolbar from '../components/common/ui/Toolbar';
-import LayerPanel from '../components/map/LayerPanel';
+import ObjectPanel from '../components/map/ObjectPanel';
 import DrawingControl from '../components/map/DrawingControl';
 import CircleDrawingControl from '../components/map/CircleDrawingControl';
 import { Layer, Coordinate, latLngToCoordinate, PolygonData, CircleData, RectangleData } from '../types/map';
 import { MapMode } from '../types/toolbar';
 
-
-// Utility function to parse WKT polygon data
 const parseWKTPolygon = (wkt: string): Coordinate[] => {
   const coordsString = wkt
     .replace(/POLYGON\s*\(\((.*)\)\)/i, '$1')
@@ -34,199 +32,64 @@ const parseWKTPolygon = (wkt: string): Coordinate[] => {
   });
 };
 
-
-// Component to handle map initialization and bounds
-const MapController: React.FC<{ 
-  coordinates: Coordinate[];
-  onMapReady?: () => void;
-}> = ({ coordinates, onMapReady }) => {
-  const map = useMap();
-
-  useEffect(() => {
-    if (coordinates.length > 0) {
-      const lats = coordinates.map(([lat]) => lat);
-      const lngs = coordinates.map(([, lng]) => lng);
-
-      const bounds = new LatLngBounds(
-        new LatLng(Math.min(...lats), Math.min(...lngs)),
-        new LatLng(Math.max(...lats), Math.max(...lngs))
-      );
-
-      map.fitBounds(bounds);
-      map.setMaxBounds(bounds.pad(0.1));
-      map.setMinZoom(map.getZoom() - 1);
-      
-      if (onMapReady) {
-        onMapReady();
-      }
-    }
-  }, [coordinates, map, onMapReady]);
-
-  return null;
-};
-
-// Loading overlay component
-const LoadingOverlay: React.FC = () => (
-  <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50">
-    <div className="bg-white rounded-lg p-6 shadow-xl">
-      <div className="flex items-center space-x-4">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        <span className="text-lg font-medium">Loading map...</span>
-      </div>
-    </div>
-  </div>
-);
-
-// Error alert component
-const ErrorAlert: React.FC<{ message: string }> = ({ message }) => (
-  <div className="absolute top-4 left-4 right-4 z-50">
-    <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded shadow-lg">
-      <div className="flex items-center">
-        <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
-        <span className="text-red-700">{message}</span>
-      </div>
-    </div>
-  </div>
-);
-
 const GameMap: React.FC = () => {
-  // State management
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [boundary, setBoundary] = useState<Coordinate[]>([]);
-  const [layers, setLayers] = useState<Layer[]>([{
-    id: 'default-layer',
-    name: 'Initial Layer',
-    visible: true,
-    color: '#5F9EA0',  // Using the teal color to match the theme
-    type: 'polygon',
-    data: null,
-  }]);
-  const [activeLayer, setActiveLayer] = useState<string | null>('default-layer');
+  const [objects, setObjects] = useState<Layer[]>([]);
+  const objectLayerRef = useRef<L.FeatureGroup | null>(null); // FeatureGroup reference
+  const [activeObject, setActiveObject] = useState<string | null>(null);
   const [mapMode, setMapMode] = useState<MapMode>(null);
   const [fillStyle, setFillStyle] = useState<'solid' | 'hashed'>('solid');
 
-  // Map center coordinates (Tel Aviv)
   const defaultCenter: Coordinate = useMemo(() => [32.0700, 34.7674], []);
 
-  // Handlers
-  const handleMapReady = useCallback(() => {
-    setIsLoading(false);
+  const handleAddObject = useCallback(
+    (type: 'polygon' | 'circle' | 'rectangle', data: PolygonData | CircleData | RectangleData) => {
+      const count = objects.filter(obj => obj.type === type).length + 1;
+      const newObject: Layer = {
+        id: `object-${Date.now()}`,
+        name: `${type.charAt(0).toUpperCase() + type.slice(1)} ${count}`,
+        visible: true,
+        color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
+        opacity: 0.4, // Default opacity
+        type: type,
+        data: data,
+      };      
+      setObjects(prev => [...prev, newObject]);
+    },
+    [objects]
+  );
+
+  const handleDeleteObject = useCallback((id: string) => {
+    setObjects(prev => prev.filter(obj => obj.id !== id));
   }, []);
 
-  const handleAddLayer = useCallback(() => {
-    const newLayer: Layer = {
-      id: `layer-${Date.now()}`,
-      name: `Layer ${layers.length + 1}`,
-      visible: true,
-      color: `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`,
-      type: 'polygon',
-      data: null,
-    };
-    setLayers(prev => [...prev, newLayer]);
-    setActiveLayer(newLayer.id);
-  }, [layers.length]);
-
-  const handleChangeLayerColor = (id: string, color: string) => {
-    setLayers(prevLayers =>
-      prevLayers.map(layer =>
-        layer.id === id ? { ...layer, color } : layer
+  const handleToggleObject = useCallback((id: string) => {
+    setObjects(prev =>
+      prev.map(obj =>
+        obj.id === id
+          ? {
+              ...obj,
+              opacity: obj.visible ? 0 : (obj.opacity ?? 0.4), // Use object's opacity or default
+              visible: !obj.visible, // Toggle visibility
+            }
+          : obj
       )
     );
-  };
+  }, []);
   
-  const handleDeleteLayer = useCallback((id: string) => {
-    setLayers(prev => prev.filter(layer => layer.id !== id));
-    if (activeLayer === id) {
-      setActiveLayer(null);
-    }
-  }, [activeLayer]);
-
-  const handleToggleLayer = useCallback((id: string) => {
-    setLayers(prev => prev.map(layer => 
-      layer.id === id ? { ...layer, visible: !layer.visible } : layer
-    ));
-  }, []);
-
-  const handleRenameLayer = useCallback((id: string, name: string) => {
-    setLayers(prev => prev.map(layer => 
-      layer.id === id ? { ...layer, name } : layer
-    ));
-  }, []);
-
-  const handleDrawComplete = useCallback((layer: L.Layer) => {
-    if (activeLayer && layer instanceof L.Polygon) {
-      const latLngs = layer.getLatLngs()[0] as L.LatLng[];
-      const coordinates = latLngs.map(latLngToCoordinate);
-      
-      setLayers(prev => prev.map(prevLayer => 
-        prevLayer.id === activeLayer 
-          ? { ...prevLayer, data: [coordinates], type: 'polygon' }
-          : prevLayer
-      ));
-    }
-  }, [activeLayer]);
-
-  const handleCircleComplete = useCallback((center: L.LatLng, radiusMeters: number) => {
-    if (activeLayer) {
-      const circleData: CircleData = {
-        center: latLngToCoordinate(center),
-        radius: radiusMeters
-      };
-      
-      setLayers(prev => prev.map(layer => 
-        layer.id === activeLayer 
-          ? { ...layer, data: circleData, type: 'circle' }
-          : layer
-      ));
-    }
-  }, [activeLayer]);
-
-  const handleRectangleComplete = useCallback(
-    (bounds: L.LatLngBounds) => {
-      if (!activeLayer) {
-        console.error('No active layer selected for rectangle');
-        return;
-      }
-
-      console.log('Starting rectangle completion with bounds:', bounds);
-      console.log('Active layer:', activeLayer);
-      
-      // Create rectangle data using the corners in correct order
-      const rectangleData: RectangleData = [
-        [bounds.getNorthWest().lat, bounds.getNorthWest().lng],
-        [bounds.getNorthEast().lat, bounds.getNorthEast().lng],
-        [bounds.getSouthEast().lat, bounds.getSouthEast().lng],
-        [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
-        [bounds.getNorthWest().lat, bounds.getNorthWest().lng], // Close the polygon
-      ];
-      
-      console.log('Created rectangle data:', rectangleData);
   
-      setLayers((prev) => {
-        return prev.map((layer) => {
-                  if (layer.id === activeLayer) {
-                    const updated: Layer = {
-                      ...layer,
-                      type: 'rectangle',
-                      data: rectangleData,
-                    };
-                    return updated;
-                  }
-                  return layer;
-                });
-      });
-    }, [activeLayer]);
+  
 
-  const handleToolChange = useCallback((tool: MapMode) => {
-    setMapMode(tool);
+  const handleRenameObject = useCallback((id: string, name: string) => {
+    setObjects(prev => prev.map(obj => obj.id === id ? { ...obj, name } : obj));
   }, []);
 
-  const handleFillStyleChange = useCallback((style: 'solid' | 'hashed') => {
-    setFillStyle(style);
+  const handleChangeObjectColor = useCallback((id: string, color: string) => {
+    setObjects(prev => prev.map(obj => obj.id === id ? { ...obj, color } : obj));
   }, []);
 
-  // Load boundary data on mount
   useEffect(() => {
     const loadBoundary = async () => {
       try {
@@ -255,163 +118,143 @@ const GameMap: React.FC = () => {
     loadBoundary();
   }, []);
 
+  useEffect(() => {
+    if (objectLayerRef.current) {
+      const layerGroup = objectLayerRef.current; // Safely reference the current value
+      layerGroup.clearLayers(); // Clear existing layers
+    
+      objects.forEach(obj => {
+        if (!obj.visible || !obj.data) {
+          return;
+        } // Skip invalid objects
+    
+        let layer: L.Layer | null = null;
+    
+        // Handle polygons and rectangles
+        if (obj.type === 'polygon' || obj.type === 'rectangle') {
+          const positions = Array.isArray(obj.data)
+            ? (obj.data as [number, number][]).map(coord => [coord[0], coord[1]] as LatLngExpression)
+            : [];
+        
+          layer = L.polygon(positions, {
+            color: obj.color,
+            weight: 2,
+            fillOpacity: 0.4,
+          });
+        }
+    
+        // Handle circles
+        if (obj.type === 'circle') {
+          const circleData = obj.data as CircleData; // Explicit cast
+          layer = L.circle(circleData.center as LatLngExpression, {
+            radius: circleData.radius,
+            color: obj.color,
+            weight: 2,
+            fillOpacity: 0.4,
+          });
+        }
+    
+        // Add the layer safely
+        if (layer) {
+          layerGroup.addLayer(layer); // Uses safe reference
+        }
+      });
+    }
+    
+  }, [objects]); // Re-run when objects change
+
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden relative">
-      {/* Toolbar */}
-      <div className="flex-none w-full">
-        <Toolbar
-          onToolChange={handleToolChange}
-          onFillStyleChange={handleFillStyleChange}
-          fillStyle={fillStyle} // Pass the fillStyle state
-          activeTool={mapMode}
-          disabled={isLoading || !!error}
-        />
-
-      </div>
-
-      {/* Main Content */}
+      <Toolbar
+        onToolChange={setMapMode}
+        onFillStyleChange={setFillStyle}
+        fillStyle={fillStyle}
+        activeTool={mapMode}
+        disabled={isLoading || !!error}
+      />
       <div className="flex-1 flex overflow-hidden w-full">
-        {/* Map Container */}
-        <div className={`flex-1 relative w-full ${mapMode === 'draw' ? 'cursor-crosshair' : ''}`}>
-          {isLoading && <LoadingOverlay />}
-          {error && <ErrorAlert message={error} />}
-          
-          <MapContainer
-            center={defaultCenter}
-            zoom={14}
-            className="h-full w-full"
-            zoomControl={false}
-            maxBoundsViscosity={1.0}
-          >
-            {/* Map Controls */}
+        <div className="flex-1 relative w-full">
+          <MapContainer center={defaultCenter} zoom={14} className="h-full w-full" zoomControl={false}>
+            <FeatureGroup ref={objectLayerRef}></FeatureGroup> {/* Add FeatureGroup */}
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; OpenStreetMap contributors'
+            />
             <ZoomControl position="bottomright" />
             <ScaleControl position="bottomleft" />
             {boundary.length > 0 && (
-              <MapController 
-                coordinates={boundary} 
-                onMapReady={handleMapReady} 
+              <Polygon
+                positions={boundary as LatLngExpression[]}
+                pathOptions={{
+                  color: '#000000',
+                  weight: 4,
+                  fillOpacity: 0,
+                  dashArray: '5, 5', // Make it visually distinct
+                }}
+                interactive={false} // Make it un-editable
+                pane="tilePane"
               />
             )}
-
-            {/* Layer Controls */}
-            <LayersControl position="topright">
-              {/* Base Maps */}
-              <LayersControl.BaseLayer checked name="Standard">
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; OpenStreetMap contributors'
-                />
-              </LayersControl.BaseLayer>
-
-              <LayersControl.BaseLayer name="Transit">
-                <TileLayer
-                  url="https://tile.memomaps.de/tilegen/{z}/{x}/{y}.png"
-                  attribution='&copy; OpenStreetMap contributors'
-                />
-              </LayersControl.BaseLayer>
-
-              {/* Game Boundary */}
-              {boundary.length > 0 && (
-                <Polygon
-                  positions={boundary}
-                  pathOptions={{
-                    color: '#5F9EA0',
-                    weight: 5,
-                    fillOpacity: 0.1,
-                    opacity: 1,
-                    dashArray: '10, 10',
-                  }}
-                />
-              )}
-
-              {/* User Layers */}
-              {layers.map(layer => {
-                if (!layer.visible || !layer.data) return null;
-
-                if (layer.type === 'polygon' && Array.isArray(layer.data)) {
-                  return (
-                    <Polygon
-                      key={layer.id}
-                      positions={layer.data}
-                      pathOptions={{
-                        color: layer.color,
-                        weight: 3,
-                        fillOpacity: 0.2,
-                        opacity: 1,
-                        dashArray: fillStyle === 'hashed' ? '5, 5' : undefined,
-                      }}
-                    />
-                  );
-                } 
-                
-                if (layer.type === 'circle' && !Array.isArray(layer.data)) {
-                  const circleData = layer.data as CircleData;
-                  return (
-                    <Circle
-                      key={layer.id}
-                      center={circleData.center}
-                      radius={circleData.radius}
-                      pathOptions={{
-                        color: layer.color,
-                        weight: 3,
-                        fillOpacity: 0.2,
-                        opacity: 1,
-                        dashArray: fillStyle === 'hashed' ? '5, 5' : undefined,
-                      }}
-                    />
-                  );
-                }
-
-                if (layer.type === 'rectangle' && Array.isArray(layer.data)) {
-                  return (
-                    <Polygon
-                      key={layer.id}
-                      positions={layer.data}
-                      pathOptions={{
-                        color: layer.color,
-                        weight: 3,
-                        fillOpacity: 0.2,
-                        opacity: 1,
-                        dashArray: fillStyle === 'hashed' ? '5, 5' : undefined,
-                      }}
-                    />
-                  );
-                }
-
-                return null;
-              })}
-            </LayersControl>
-
-            {/* Drawing Controls */}
-            <DrawingControl 
-              onDrawComplete={handleDrawComplete}
-              isDrawingMode={mapMode === 'draw'}
-              boundary={boundary} 
-            />
+            {objects.map(obj => {
+              if (obj.type === 'polygon' || obj.type === 'rectangle') {
+                const positions = Array.isArray(obj.data)
+                  ? (obj.data as [number, number][]).map(coord => [coord[0], coord[1]] as LatLngExpression)
+                  : [];
+              
+                return (
+                  <Polygon
+                    key={obj.id}
+                    positions={positions}
+                    pathOptions={{
+                      color: obj.color,
+                      weight: 2,
+                      opacity: obj.opacity,       // Controls border opacity
+                      fillOpacity: obj.opacity,   // Controls fill opacity
+                    }}
+                  />
+                );
+              }
+              
+              // Handle circles
+              if (obj.type === 'circle') {
+                const circleData = obj.data as CircleData; // Explicit cast
+                return (
+                  <Circle
+                    key={obj.id}
+                    center={circleData.center as LatLngExpression}
+                    radius={circleData.radius}
+                    pathOptions={{
+                      color: obj.color,
+                      weight: 2,
+                      opacity: obj.opacity,       // Controls border opacity
+                      fillOpacity: obj.opacity,   // Controls fill opacity
+                    }}
+                  />
+                );
+              }
+    
+              return null; // Fallback for unsupported object types
+            })}
+            <DrawingControl onDrawComplete={(data) => handleAddObject('polygon', data)} isDrawingMode={mapMode === 'draw'} boundary={boundary} />
             <CircleDrawingControl 
-              onCircleComplete={handleCircleComplete}
-              isEnabled={mapMode === 'circle'}
+              onCircleComplete={(center, radius) => 
+                handleAddObject('circle', { center: [center.lat, center.lng], radius }) // Convert LatLng to tuple
+              }
+              isEnabled={mapMode === 'circle'} 
               boundary={boundary} 
             />
-            <SquareDrawingControl
-              onSquareComplete={handleRectangleComplete}
-              isEnabled={mapMode === 'rectangle'}
-              boundary={boundary}
-            />
+            <SquareDrawingControl onSquareComplete={(coordinates) => handleAddObject('rectangle', coordinates)} isEnabled={mapMode === 'rectangle'} boundary={boundary} />
           </MapContainer>
         </div>
-
-        {/* Layer Panel */}
         <div className="w-80 flex-none border-l border-jl-sage/30 bg-jl-cream">
-          <LayerPanel
-            layers={layers}
-            onAddLayer={handleAddLayer}
-            onDeleteLayer={handleDeleteLayer}
-            onToggleLayer={handleToggleLayer}
-            onRenameLayer={handleRenameLayer}
-            onChangeLayerColor={handleChangeLayerColor} // <-- Add this line
-            activeLayer={activeLayer}
-            setActiveLayer={setActiveLayer}
+          <ObjectPanel
+            objects={objects}
+            onDeleteObject={handleDeleteObject}
+            onToggleObject={handleToggleObject}
+            onRenameObject={handleRenameObject}
+            onChangeObjectColor={handleChangeObjectColor}
+            activeObject={activeObject}
+            setActiveObject={setActiveObject}
           />
         </div>
       </div>

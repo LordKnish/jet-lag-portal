@@ -9,19 +9,21 @@ export interface CircleData {
 }
 
 // Define RectangleData as an array of coordinates (polygon-like)
-export type RectangleData = Coordinate[]; // <-- Added this line
+export type RectangleData = Coordinate[];
 
 export interface Layer {
   id: string;
   name: string;
   visible: boolean;
   color: string;
-  type: 'polygon' | 'circle' | 'rectangle'; 
+  opacity?: number; // Add opacity property
+  type: 'polygon' | 'circle' | 'rectangle';
   data: PolygonData | CircleData | RectangleData | null;
 }
 
+
 // Utility function to convert LatLng to Coordinate
-export const latLngToCoordinate = (latLng: L.LatLng): Coordinate => [
+export const latLngToCoordinate = (latLng: LatLng): Coordinate => [
   latLng.lat,
   latLng.lng,
 ];

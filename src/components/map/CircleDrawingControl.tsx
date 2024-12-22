@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Check, X } from 'lucide-react';
+import { latLngToCoordinate } from '../../types/map';
 
 interface CircleDrawingControlProps {
   onCircleComplete?: (center: L.LatLng, radiusMeters: number) => void;
@@ -187,11 +188,17 @@ const CircleDrawingControl: React.FC<CircleDrawingControlProps> = ({
   }, [map, isEnabled]);
 
   const handleConfirm = () => {
-    if (circleRef.current && onCircleComplete) {
-      onCircleComplete(circleRef.current.getLatLng(), circleRef.current.getRadius());
+    if (circleRef.current && onCircleComplete) { // Ensure onCircleComplete exists
+      const center = circleRef.current.getLatLng();
+      const radius = circleRef.current.getRadius();
+  
+      // Call only if defined
+      onCircleComplete && onCircleComplete(center, radius); // Safe optional chaining
     }
     cleanupCircle();
   };
+  
+  
 
   const handleCancel = () => {
     cleanupCircle();

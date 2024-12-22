@@ -6,17 +6,14 @@ import L from 'leaflet';
 import { Check, X } from 'lucide-react';
 import 'leaflet-draw'; // optional if you rely on Leaflet.Draw's CSS
 import 'leaflet-draw/dist/leaflet.draw.css'; // optional
+import { latLngToCoordinate } from '../../types/map';
 
 interface DrawingControlProps {
-  onDrawComplete?: (layer: L.Layer) => void;
+  onDrawComplete?: (coordinates: [number, number][]) => void; // Changed to accept coordinates
   isDrawingMode: boolean;
   boundary?: [number, number][]; 
-  /**
-   * boundary is optional; if you need to force polygon points 
-   * to lie inside a boundary, pass an array of [lat, lng].
-   * Otherwise you can omit or pass an empty array.
-   */
 }
+
 
 const DrawingControl: React.FC<DrawingControlProps> = ({
   onDrawComplete,
@@ -80,10 +77,18 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
   //---------------------------
   const handleConfirm = () => {
     if (polygonRef.current && onDrawComplete) {
-      onDrawComplete(polygonRef.current);
+      const latLngs = polygonRef.current.getLatLngs()[0] as L.LatLng[];
+      const coordinates = latLngs.map(latLngToCoordinate);
+      
+      onDrawComplete(coordinates); // Pass coordinates instead of the layer
     }
     cleanupPolygon();
   };
+  
+  
+  
+  
+  
 
   const handleCancel = () => {
     cleanupPolygon();

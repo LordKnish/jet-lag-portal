@@ -1,10 +1,12 @@
+// src/components/map/SquareDrawingControl.tsx
+
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Check, X } from 'lucide-react';
 
 interface SquareDrawingControlProps {
-  onSquareComplete?: (bounds: L.LatLngBounds) => void;
+  onSquareComplete?: (coordinates: [number, number][]) => void; // Updated type
   isEnabled: boolean;
   boundary: [number, number][];
 }
@@ -85,9 +87,7 @@ const SquareDrawingControl: React.FC<SquareDrawingControlProps> = ({
       rectangleRef.current = rectangle;
 
       const handleMouseMove = (moveEvent: L.LeafletMouseEvent) => {
-        if (!rectangleRef.current || !initialClickRef.current) {
-          return;
-        }
+        if (!rectangleRef.current || !initialClickRef.current) return;
         
         // Create bounds from initial click and current mouse position
         const sw = L.latLng(
@@ -158,22 +158,18 @@ const SquareDrawingControl: React.FC<SquareDrawingControlProps> = ({
   const handleConfirm = () => {
     if (rectangleRef.current && onSquareComplete) {
       const bounds = rectangleRef.current.getBounds();
-      console.log('SquareDrawingControl - Confirming rectangle with bounds:', {
-        northEast: bounds.getNorthEast(),
-        southWest: bounds.getSouthWest(),
-        northWest: bounds.getNorthWest(),
-        southEast: bounds.getSouthEast()
-      });
-      onSquareComplete(bounds);
-      console.log('SquareDrawingControl - Called onSquareComplete');
-      cleanupRectangle();
-      console.log('SquareDrawingControl - Cleaned up rectangle');
-    } else {
-      console.warn('SquareDrawingControl - Missing rectangle reference or callback:', {
-        hasRectangle: !!rectangleRef.current,
-        hasCallback: !!onSquareComplete
-      });
+      
+      const rectangleData: [number, number][] = [
+        [bounds.getNorthWest().lat, bounds.getNorthWest().lng],
+        [bounds.getNorthEast().lat, bounds.getNorthEast().lng],
+        [bounds.getSouthEast().lat, bounds.getSouthEast().lng],
+        [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
+        [bounds.getNorthWest().lat, bounds.getNorthWest().lng], // Close the polygon
+      ];
+      
+      onSquareComplete(rectangleData); // Pass coordinates instead of bounds
     }
+    cleanupRectangle();
   };
 
   const handleCancel = () => {

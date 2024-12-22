@@ -47,7 +47,7 @@ const ToolButton: React.FC<{
     `}
     onClick={onClick}
     title={label}
-    disabled={disabled}
+    disabled={false}
   >
     <div className="w-6 h-6 flex items-center justify-center">
       {icon}
@@ -76,7 +76,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
               label="Pan Tool"
               onClick={() => onToolChange?.('pan')}
               active={activeTool === 'pan'}
-              disabled={disabled}
+              disabled={false}
             />
           </div>
 
@@ -87,28 +87,21 @@ const Toolbar: React.FC<ToolbarProps> = ({
               label="Free Draw"
               onClick={() => onToolChange?.('draw')}
               active={activeTool === 'draw'}
-              disabled={disabled}
+              disabled={false}
             />
             <ToolButton
               icon={<Circle size={24} weight="duotone" />}
               label="Draw Circle"
               onClick={() => onToolChange?.('circle')}
               active={activeTool === 'circle'}
-              disabled={disabled}
+              disabled={false}
             />
             <ToolButton
               icon={<Square size={24} weight="duotone" />}
               label="Draw Rectangle"
               onClick={() => onToolChange?.('rectangle')}
               active={activeTool === 'rectangle'}
-              disabled={disabled}
-            />
-            <ToolButton
-              icon={<Eraser size={24} weight="duotone" />}
-              label="Erase"
-              onClick={() => onToolChange?.('erase')}
-              active={activeTool === 'erase'}
-              disabled={disabled}
+              disabled={false}
             />
           </div>
 
@@ -119,7 +112,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
               label="Selection"
               onClick={() => onToolChange?.('select')}
               active={activeTool === 'select'}
-              disabled={disabled}
+              disabled={false}
             />
             <ToolButton
               icon={<PaintBucket size={24} weight="duotone" />}
@@ -129,7 +122,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 onFillStyleChange?.('solid');
               }}
               active={activeTool === 'fill'}
-              disabled={disabled}
+              disabled={false}
             />
             <ToolButton
               icon={<Hash size={24} weight="duotone" />}
@@ -139,7 +132,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 onFillStyleChange?.('hashed');
               }}
               active={activeTool === 'fill' && fillStyle === 'hashed'}
-              disabled={disabled}
+              disabled={false}
             />
           </div>
 
@@ -150,21 +143,21 @@ const Toolbar: React.FC<ToolbarProps> = ({
               label="Measure Distance"
               onClick={() => onToolChange?.('measure')}
               active={activeTool === 'measure'}
-              disabled={disabled}
+              disabled={false}
             />
             <ToolButton
               icon={<CirclesFour size={24} weight="duotone" />}
               label="Distance Rings"
               onClick={() => onToolChange?.('rings')}
               active={activeTool === 'rings'}
-              disabled={disabled}
+              disabled={false}
             />
             <ToolButton
               icon={<MapPin size={24} weight="duotone" />}
               label="Place Marker"
               onClick={() => onToolChange?.('marker')}
               active={activeTool === 'marker'}
-              disabled={disabled}
+              disabled={false}
             />
           </div>
 
@@ -174,13 +167,13 @@ const Toolbar: React.FC<ToolbarProps> = ({
               icon={<ArrowCounterClockwise size={24} weight="bold" />}
               label="Undo"
               onClick={onUndo}
-              disabled={disabled}
+              disabled={false}
             />
             <ToolButton
               icon={<ArrowClockwise size={24} weight="bold" />}
               label="Redo"
               onClick={onRedo}
-              disabled={disabled}
+              disabled={false}
             />
           </div>
         </div>
