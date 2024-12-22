@@ -134,7 +134,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 onToolChange?.('fill');
                 onFillStyleChange?.('hashed');
               }}
-              active={activeTool === 'fill-hashed'}
+              active={activeTool === 'fill' && onFillStyleChange && 'hashed'}
               disabled={disabled}
             />
           </div>

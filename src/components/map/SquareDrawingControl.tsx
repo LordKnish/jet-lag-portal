@@ -92,15 +92,20 @@ const SquareDrawingControl: React.FC<SquareDrawingControlProps> = ({
         const currentLatLng = moveEvent.latlng;
 
         // Define bounds from initial click to current mouse position
-        const bounds = L.latLngBounds(initialClickRef.current, currentLatLng);
+        const bounds = L.latLngBounds(
+          [initialClickRef.current.lat, initialClickRef.current.lng],
+          [currentLatLng.lat, currentLatLng.lng]
+        );
+        
 
         // Ensure that the new bounds are within the boundary polygon
         const allPointsInside = [
-          bounds.getSouthWest(),
-          bounds.getNorthWest(),
-          bounds.getNorthEast(),
-          bounds.getSouthEast(),
-        ].every(point => isPointInPolygon(point, boundary));
+          [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
+          [bounds.getNorthWest().lat, bounds.getNorthWest().lng],
+          [bounds.getNorthEast().lat, bounds.getNorthEast().lng],
+          [bounds.getSouthEast().lat, bounds.getSouthEast().lng],
+        ].every(([lat, lng]) => isPointInPolygon(L.latLng(lat, lng), boundary));
+        
 
         if (allPointsInside) {
           rectangleRef.current.setBounds(bounds);
