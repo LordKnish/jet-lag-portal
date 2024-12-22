@@ -13,7 +13,7 @@ import {
 import L, { LatLngBounds, LatLng } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AlertCircle } from 'lucide-react';
-
+import SquareDrawingControl from '../components/map/SquareDrawingControl';
 import Toolbar from '../components/common/ui/Toolbar';
 import LayerPanel from '../components/map/LayerPanel';
 import DrawingControl from '../components/map/DrawingControl';
@@ -181,6 +181,23 @@ const GameMap: React.FC = () => {
     }
   }, [activeLayer]);
 
+  const handleRectangleComplete = useCallback((bounds: L.LatLngBounds) => {
+    if (activeLayer) {
+      const coordinates = [
+        [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
+        [bounds.getNorthWest().lat, bounds.getNorthWest().lng],
+        [bounds.getNorthEast().lat, bounds.getNorthEast().lng],
+        [bounds.getSouthEast().lat, bounds.getSouthEast().lng],
+      ];
+      
+      setLayers(prev => prev.map(layer => 
+        layer.id === activeLayer 
+          ? { ...layer, data: coordinates, type: 'rectangle' }
+          : layer
+      ));
+    }
+  }, [activeLayer]);
+
   const handleToolChange = useCallback((tool: MapMode) => {
     setMapMode(tool);
   }, []);
@@ -323,6 +340,22 @@ const GameMap: React.FC = () => {
                   );
                 }
 
+                if (layer.type === 'rectangle' && Array.isArray(layer.data)) {
+                  return (
+                    <Polygon
+                      key={layer.id}
+                      positions={layer.data}
+                      pathOptions={{
+                        color: layer.color,
+                        weight: 3,
+                        fillOpacity: 0.2,
+                        opacity: 1,
+                        dashArray: fillStyle === 'hashed' ? '5, 5' : undefined,
+                      }}
+                    />
+                  );
+                }
+
                 return null;
               })}
             </LayersControl>
@@ -337,6 +370,11 @@ const GameMap: React.FC = () => {
               onCircleComplete={handleCircleComplete}
               isEnabled={mapMode === 'circle'}
               boundary={boundary} 
+            />
+            <SquareDrawingControl
+              onSquareComplete={handleRectangleComplete}
+              isEnabled={mapMode === 'rectangle'}
+              boundary={boundary}
             />
           </MapContainer>
         </div>

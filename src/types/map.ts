@@ -8,15 +8,6 @@ export interface CircleData {
   center: Coordinate;
   radius: number; // radius in meters
 }
-
-export interface Layer {
-  id: string;
-  name: string;
-  visible: boolean;
-  color: string;
-  type: 'polygon' | 'circle';
-  data: PolygonData | CircleData | null;
-}
 // src/types/map.ts
 export interface CircleData {
   center: [number, number];  // [lat, lng]
@@ -28,8 +19,8 @@ export interface Layer {
   name: string;
   visible: boolean;
   color: string;
-  type: 'polygon' | 'circle';
-  data: PolygonData | CircleData | null;
+  type: 'polygon' | 'circle' | 'rectangle';
+  data: PolygonData | CircleData | [number, number][] | null;
 }
 export const latLngToCoordinate = (latLng: L.LatLng): Coordinate => [
   latLng.lat,

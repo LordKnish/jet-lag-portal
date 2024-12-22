@@ -68,7 +68,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
           {/* Navigation Tools Group */}
           <div className="flex items-center gap-1 pr-3 border-r border-jl-sage/30">
             <ToolButton
-              icon={<Hand weight="fill" />}
+              icon={<Hand size={24} weight="bold" />}
               label="Pan Tool"
               onClick={() => onToolChange?.('pan')}
               active={activeTool === 'pan'}
@@ -79,7 +79,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
           {/* Drawing Tools Group */}
           <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
             <ToolButton
-              icon={<Pencil weight="fill" />}
+              icon={<Pencil size={24} weight="bold" />}
               label="Free Draw"
               onClick={() => onToolChange?.('draw')}
               active={activeTool === 'draw'}
@@ -167,13 +167,13 @@ const Toolbar: React.FC<ToolbarProps> = ({
           {/* History Controls */}
           <div className="flex items-center gap-1 ml-auto">
             <ToolButton
-              icon={<ArrowCounterClockwise size={24} weight="duotone" />}
+              icon={<ArrowCounterClockwise size={24} weight="bold" />}
               label="Undo"
               onClick={onUndo}
               disabled={disabled}
             />
             <ToolButton
-              icon={<ArrowClockwise size={24} weight="duotone" />}
+              icon={<ArrowClockwise size={24} weight="bold" />}
               label="Redo"
               onClick={onRedo}
               disabled={disabled}
