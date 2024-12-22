@@ -8,7 +8,8 @@ import {
   ZoomControl,
   useMap,
   ScaleControl,
-  FeatureGroup
+  FeatureGroup,
+  LayersControl
 } from 'react-leaflet';
 import L, { LatLngBounds, LatLng, LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -41,7 +42,7 @@ const GameMap: React.FC = () => {
   const [activeObject, setActiveObject] = useState<string | null>(null);
   const [mapMode, setMapMode] = useState<MapMode>(null);
   const [fillStyle, setFillStyle] = useState<'solid' | 'hashed'>('solid');
-
+  const apiKey = import.meta.env.VITE_THUNDERFOREST_API_KEY || '';
   const defaultCenter: Coordinate = useMemo(() => [32.0700, 34.7674], []);
 
   const handleAddObject = useCallback(
@@ -176,10 +177,36 @@ const GameMap: React.FC = () => {
         <div className="flex-1 relative w-full">
           <MapContainer center={defaultCenter} zoom={14} className="h-full w-full" zoomControl={false}>
             <FeatureGroup ref={objectLayerRef}></FeatureGroup> {/* Add FeatureGroup */}
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; OpenStreetMap contributors'
-            />
+            <LayersControl position="topright">
+              <LayersControl.BaseLayer checked name="Default Map">
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution="&copy; OpenStreetMap contributors"
+                />
+              </LayersControl.BaseLayer>
+
+              <LayersControl.BaseLayer name="OpenCycleMap">
+                <TileLayer
+                  url={`https://tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=${apiKey}`}
+                  attribution="&copy; Thunderforest & OpenStreetMap contributors"
+                />
+              </LayersControl.BaseLayer>
+
+              <LayersControl.BaseLayer name="Transport">
+                <TileLayer
+                  url={`https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=${apiKey}`}
+                  attribution="&copy; Thunderforest & OpenStreetMap contributors"
+                />
+              </LayersControl.BaseLayer>
+              <LayersControl.BaseLayer name="Outdoors">
+                <TileLayer
+                  url={`https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${apiKey}`}
+                  attribution="&copy; Thunderforest & OpenStreetMap contributors"
+                />
+              </LayersControl.BaseLayer>
+            </LayersControl>
+
+
             <ZoomControl position="bottomright" />
             <ScaleControl position="bottomleft" />
             {boundary.length > 0 && (

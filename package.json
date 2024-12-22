@@ -19,6 +19,7 @@
     "@types/react-router-dom": "^5.3.3",
     "@uiw/react-color-chrome": "^2.3.4",
     "autoprefixer": "^10.4.20",
+    "dotenv": "^16.4.7",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
     "leaflet-pip": "^1.1.0",
