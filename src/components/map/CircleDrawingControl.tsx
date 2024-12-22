@@ -155,7 +155,9 @@ const CircleDrawingControl: React.FC<CircleDrawingControlProps> = ({
     
       // Handle mouse move
       const handleMouseMove = (moveEvent: L.LeafletMouseEvent) => {
-        if (!circleRef.current || !initialClickRef.current) return;
+        if (!circleRef.current || !initialClickRef.current) {
+          return;
+        }
     
         const radius = initialClickRef.current.distanceTo(moveEvent.latlng);
         const snappedRadius = findNearestRadius(radius);

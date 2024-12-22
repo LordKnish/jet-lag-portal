@@ -124,7 +124,9 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
   //  Handle clicks to add polygon vertices
   //---------------------------
   useEffect(() => {
-    if (!isDrawingMode) return;
+    if (!isDrawingMode) {
+      return;
+    }
 
     const handleMapClick = (e: L.LeafletMouseEvent) => {
       // If boundary is provided, check if the click is inside it

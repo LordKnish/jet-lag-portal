@@ -1,32 +1,29 @@
 // src/pages/GameMap.tsx
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { 
-  MapContainer, 
-  TileLayer, 
+import {
+  MapContainer,
+  TileLayer,
   Polygon,
-  Circle, 
+  Circle,
   ZoomControl,
-  useMap,
-  ScaleControl,
   FeatureGroup,
-  LayersControl
+  LayersControl,
+  ScaleControl,
 } from 'react-leaflet';
-import L, { LatLngBounds, LatLng, LatLngExpression } from 'leaflet';
+import L, { LatLng, LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { AlertCircle } from 'lucide-react';
-import SquareDrawingControl from '../components/map/SquareDrawingControl';
 import Toolbar from '../components/common/ui/Toolbar';
 import ObjectPanel from '../components/map/ObjectPanel';
 import DrawingControl from '../components/map/DrawingControl';
+import SquareDrawingControl from '../components/map/SquareDrawingControl';
 import CircleDrawingControl from '../components/map/CircleDrawingControl';
-import { Layer, Coordinate, latLngToCoordinate, PolygonData, CircleData, RectangleData } from '../types/map';
+import MoveTool from '../components/map/MoveTool';
+import MapClickHandler from '../components/map/MapClickHandler';
+import { Layer, Coordinate, PolygonData, CircleData, RectangleData } from '../types/map';
 import { MapMode } from '../types/toolbar';
 
 const parseWKTPolygon = (wkt: string): Coordinate[] => {
-  const coordsString = wkt
-    .replace(/POLYGON\s*\(\((.*)\)\)/i, '$1')
-    .trim();
-
+  const coordsString = wkt.replace(/POLYGON\s*\(\((.*)\)\)/i, '$1').trim();
   return coordsString.split(', ').map(coord => {
     const [lng, lat] = coord.split(' ').map(Number);
     return [lat, lng];
@@ -38,28 +35,57 @@ const GameMap: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [boundary, setBoundary] = useState<Coordinate[]>([]);
   const [objects, setObjects] = useState<Layer[]>([]);
-  const objectLayerRef = useRef<L.FeatureGroup | null>(null); // FeatureGroup reference
+  const objectLayerRef = useRef<L.FeatureGroup | null>(null);
   const [activeObject, setActiveObject] = useState<string | null>(null);
   const [mapMode, setMapMode] = useState<MapMode>(null);
   const [fillStyle, setFillStyle] = useState<'solid' | 'hashed'>('solid');
   const apiKey = import.meta.env.VITE_THUNDERFOREST_API_KEY || '';
-  const defaultCenter: Coordinate = useMemo(() => [32.0700, 34.7674], []);
+  const defaultCenter: Coordinate = useMemo(() => [32.07, 34.7674], []);
 
+  // Create new shape object
   const handleAddObject = useCallback(
-    (type: 'polygon' | 'circle' | 'rectangle', data: PolygonData | CircleData | RectangleData) => {
+    (
+      type: 'polygon' | 'circle' | 'rectangle',
+      data: PolygonData | CircleData | RectangleData
+    ) => {
       const count = objects.filter(obj => obj.type === type).length + 1;
       const newObject: Layer = {
         id: `object-${Date.now()}`,
         name: `${type.charAt(0).toUpperCase() + type.slice(1)} ${count}`,
         visible: true,
-        color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`,
-        opacity: 0.4, // Default opacity
-        type: type,
-        data: data,
-      };      
+        color: `#${Math.floor(Math.random() * 16777215)
+          .toString(16)
+          .padStart(6, '0')}`,
+        opacity: 0.4,
+        type,
+        data,
+      };
       setObjects(prev => [...prev, newObject]);
     },
     [objects]
+  );
+
+  // Update shape data
+  const handleUpdateObject = useCallback(
+    (id: string, newData: Coordinate[] | CircleData | null) => {
+      if (!newData) {
+        return;
+      }
+      setObjects(prev =>
+        prev.map(obj => {
+          if (obj.id === id) {
+            // If it's a circle, we expect { center, radius }
+            if (obj.type === 'circle' && 'center' in newData) {
+              return { ...obj, data: { center: newData.center, radius: newData.radius } };
+            }
+            // Otherwise, treat as array of coordinates (polygon/rectangle)
+            return { ...obj, data: newData as Coordinate[] };
+          }
+          return obj;
+        })
+      );
+    },
+    []
   );
 
   const handleDeleteObject = useCallback((id: string) => {
@@ -72,25 +98,23 @@ const GameMap: React.FC = () => {
         obj.id === id
           ? {
               ...obj,
-              opacity: obj.visible ? 0 : (obj.opacity ?? 0.4), // Use object's opacity or default
-              visible: !obj.visible, // Toggle visibility
+              opacity: obj.visible ? 0 : obj.opacity ?? 0.4,
+              visible: !obj.visible,
             }
           : obj
       )
     );
   }, []);
-  
-  
-  
 
   const handleRenameObject = useCallback((id: string, name: string) => {
-    setObjects(prev => prev.map(obj => obj.id === id ? { ...obj, name } : obj));
+    setObjects(prev => prev.map(obj => (obj.id === id ? { ...obj, name } : obj)));
   }, []);
 
   const handleChangeObjectColor = useCallback((id: string, color: string) => {
-    setObjects(prev => prev.map(obj => obj.id === id ? { ...obj, color } : obj));
+    setObjects(prev => prev.map(obj => (obj.id === id ? { ...obj, color } : obj)));
   }, []);
 
+  // Load boundary from CSV / WKT
   useEffect(() => {
     const loadBoundary = async () => {
       try {
@@ -110,43 +134,40 @@ const GameMap: React.FC = () => {
           }
         }
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load game boundary';
+        const errorMessage =
+          err instanceof Error ? err.message : 'Failed to load game boundary';
         setError(`${errorMessage}. Please try refreshing the page.`);
         setIsLoading(false);
       }
     };
-
     loadBoundary();
   }, []);
 
+  // Re-draw objects into the FeatureGroup each time `objects` changes
   useEffect(() => {
     if (objectLayerRef.current) {
-      const layerGroup = objectLayerRef.current; // Safely reference the current value
-      layerGroup.clearLayers(); // Clear existing layers
-    
+      const layerGroup = objectLayerRef.current;
+      layerGroup.clearLayers();
+
       objects.forEach(obj => {
         if (!obj.visible || !obj.data) {
           return;
-        } // Skip invalid objects
-    
+        }
         let layer: L.Layer | null = null;
-    
-        // Handle polygons and rectangles
+
         if (obj.type === 'polygon' || obj.type === 'rectangle') {
           const positions = Array.isArray(obj.data)
-            ? (obj.data as [number, number][]).map(coord => [coord[0], coord[1]] as LatLngExpression)
+            ? (obj.data as [number, number][]).map(
+                ([lat, lng]) => [lat, lng] as LatLngExpression
+              )
             : [];
-        
           layer = L.polygon(positions, {
             color: obj.color,
             weight: 2,
             fillOpacity: 0.4,
           });
-        }
-    
-        // Handle circles
-        if (obj.type === 'circle') {
-          const circleData = obj.data as CircleData; // Explicit cast
+        } else if (obj.type === 'circle') {
+          const circleData = obj.data as CircleData;
           layer = L.circle(circleData.center as LatLngExpression, {
             radius: circleData.radius,
             color: obj.color,
@@ -154,15 +175,12 @@ const GameMap: React.FC = () => {
             fillOpacity: 0.4,
           });
         }
-    
-        // Add the layer safely
         if (layer) {
-          layerGroup.addLayer(layer); // Uses safe reference
+          layerGroup.addLayer(layer);
         }
       });
     }
-    
-  }, [objects]); // Re-run when objects change
+  }, [objects]);
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden relative">
@@ -176,7 +194,25 @@ const GameMap: React.FC = () => {
       <div className="flex-1 flex overflow-hidden w-full">
         <div className="flex-1 relative w-full">
           <MapContainer center={defaultCenter} zoom={14} className="h-full w-full" zoomControl={false}>
-            <FeatureGroup ref={objectLayerRef}></FeatureGroup> {/* Add FeatureGroup */}
+            <FeatureGroup ref={objectLayerRef} />
+
+            {/* Handles map clicks for shape selection, etc. */}
+            <MapClickHandler
+              mapMode={mapMode}
+              objects={objects}
+              setActiveObject={setActiveObject}
+            />
+
+            {/* MoveTool only when we're in 'move' mode */}
+            {mapMode === 'move' && (
+              <MoveTool
+                activeTool={mapMode}
+                selectedObject={objects.find(obj => obj.id === activeObject) || null}
+                onUpdateObject={handleUpdateObject}
+                boundary={boundary}
+              />
+            )}
+
             <LayersControl position="topright">
               <LayersControl.BaseLayer checked name="Default Map">
                 <TileLayer
@@ -198,6 +234,7 @@ const GameMap: React.FC = () => {
                   attribution="&copy; Thunderforest & OpenStreetMap contributors"
                 />
               </LayersControl.BaseLayer>
+
               <LayersControl.BaseLayer name="Outdoors">
                 <TileLayer
                   url={`https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${apiKey}`}
@@ -206,9 +243,10 @@ const GameMap: React.FC = () => {
               </LayersControl.BaseLayer>
             </LayersControl>
 
-
             <ZoomControl position="bottomright" />
             <ScaleControl position="bottomleft" />
+
+            {/* Game boundary polygon (optional) */}
             {boundary.length > 0 && (
               <Polygon
                 positions={boundary as LatLngExpression[]}
@@ -216,18 +254,23 @@ const GameMap: React.FC = () => {
                   color: '#000000',
                   weight: 4,
                   fillOpacity: 0,
-                  dashArray: '5, 5', // Make it visually distinct
+                  dashArray: '5, 5',
                 }}
-                interactive={false} // Make it un-editable
+                interactive={false}
                 pane="tilePane"
               />
             )}
+
+            {/* Direct rendering of objects (optional if not using FeatureGroup) */}
             {objects.map(obj => {
+              if (!obj.visible || !obj.data) {
+                return null;
+              }
+
               if (obj.type === 'polygon' || obj.type === 'rectangle') {
-                const positions = Array.isArray(obj.data)
-                  ? (obj.data as [number, number][]).map(coord => [coord[0], coord[1]] as LatLngExpression)
-                  : [];
-              
+                const positions = (obj.data as Coordinate[]).map(
+                  ([lat, lng]) => [lat, lng] as LatLngExpression
+                );
                 return (
                   <Polygon
                     key={obj.id}
@@ -235,16 +278,14 @@ const GameMap: React.FC = () => {
                     pathOptions={{
                       color: obj.color,
                       weight: 2,
-                      opacity: obj.opacity,       // Controls border opacity
-                      fillOpacity: obj.opacity,   // Controls fill opacity
+                      opacity: obj.opacity,
+                      fillOpacity: obj.opacity,
                     }}
                   />
                 );
               }
-              
-              // Handle circles
               if (obj.type === 'circle') {
-                const circleData = obj.data as CircleData; // Explicit cast
+                const circleData = obj.data as CircleData;
                 return (
                   <Circle
                     key={obj.id}
@@ -253,26 +294,38 @@ const GameMap: React.FC = () => {
                     pathOptions={{
                       color: obj.color,
                       weight: 2,
-                      opacity: obj.opacity,       // Controls border opacity
-                      fillOpacity: obj.opacity,   // Controls fill opacity
+                      opacity: obj.opacity,
+                      fillOpacity: obj.opacity,
                     }}
                   />
                 );
               }
-    
-              return null; // Fallback for unsupported object types
+              return null;
             })}
-            <DrawingControl onDrawComplete={(data) => handleAddObject('polygon', data)} isDrawingMode={mapMode === 'draw'} boundary={boundary} />
-            <CircleDrawingControl 
-              onCircleComplete={(center, radius) => 
-                handleAddObject('circle', { center: [center.lat, center.lng], radius }) // Convert LatLng to tuple
-              }
-              isEnabled={mapMode === 'circle'} 
-              boundary={boundary} 
+
+            {/* Drawing Controls */}
+            <DrawingControl
+              onDrawComplete={data => handleAddObject('polygon', data)}
+              isDrawingMode={mapMode === 'draw'}
+              boundary={boundary}
             />
-            <SquareDrawingControl onSquareComplete={(coordinates) => handleAddObject('rectangle', coordinates)} isEnabled={mapMode === 'rectangle'} boundary={boundary} />
+
+            <SquareDrawingControl
+              onSquareComplete={coordinates => handleAddObject('rectangle', coordinates)}
+              isEnabled={mapMode === 'rectangle'}
+              boundary={boundary}
+            />
+
+            <CircleDrawingControl
+              onCircleComplete={(center: L.LatLng, radius: number) =>
+                handleAddObject('circle', { center: [center.lat, center.lng], radius })
+              }
+              isEnabled={mapMode === 'circle'}
+              boundary={boundary}
+            />
           </MapContainer>
         </div>
+
         <div className="w-80 flex-none border-l border-jl-sage/30 bg-jl-cream">
           <ObjectPanel
             objects={objects}

@@ -87,7 +87,9 @@ const SquareDrawingControl: React.FC<SquareDrawingControlProps> = ({
       rectangleRef.current = rectangle;
 
       const handleMouseMove = (moveEvent: L.LeafletMouseEvent) => {
-        if (!rectangleRef.current || !initialClickRef.current) return;
+        if (!rectangleRef.current || !initialClickRef.current) {
+          return;
+        }
         
         // Create bounds from initial click and current mouse position
         const sw = L.latLng(

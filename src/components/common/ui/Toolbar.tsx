@@ -1,7 +1,7 @@
 // src/components/common/ui/Toolbar.tsx
 import React from 'react';
 import { 
-  Pencil,
+  PencilLine,
   Eraser,
   CirclesFour,
   Ruler,
@@ -13,7 +13,9 @@ import {
   Square,
   SelectionAll,
   MapPin,
-  Hash
+  Hash,
+  ArrowsOutCardinal,
+  Polygon
 } from "@phosphor-icons/react";
 import { MapMode } from '../../../types/toolbar';
 
@@ -83,8 +85,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
           {/* Drawing Tools Group */}
           <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
             <ToolButton
-              icon={<Pencil size={24} weight="bold" />}
-              label="Free Draw"
+              icon={<Polygon size={24} weight="bold" />}
+              label="Draw Polygon"
               onClick={() => onToolChange?.('draw')}
               active={activeTool === 'draw'}
               disabled={false}
@@ -115,23 +117,17 @@ const Toolbar: React.FC<ToolbarProps> = ({
               disabled={false}
             />
             <ToolButton
-              icon={<PaintBucket size={24} weight="duotone" />}
-              label="Fill"
-              onClick={() => {
-                onToolChange?.('fill');
-                onFillStyleChange?.('solid');
-              }}
-              active={activeTool === 'fill'}
+              icon={<ArrowsOutCardinal size={24} weight="bold" />}
+              label="Move Shape"
+              onClick={() => onToolChange?.('move')}
+              active={activeTool === 'move'}
               disabled={false}
             />
             <ToolButton
-              icon={<Hash size={24} weight="duotone" />}
-              label="Hashed Fill"
-              onClick={() => {
-                onToolChange?.('fill');
-                onFillStyleChange?.('hashed');
-              }}
-              active={activeTool === 'fill' && fillStyle === 'hashed'}
+              icon={<PencilLine size={24} weight="bold" />}
+              label="Edit Shape"
+              onClick={() => onToolChange?.('edit')}
+              active={activeTool === 'edit'}
               disabled={false}
             />
           </div>

@@ -11,6 +11,8 @@ export type MapMode =
   | 'measure' 
   | 'rings' 
   | 'marker'
+  | 'move'      // Added 'move' mode
+  | 'edit'      // Added 'edit' mode
   | null;
 
 export type FillStyle = 'solid' | 'hashed';
