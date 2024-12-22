@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Trash2, Eye, EyeOff, Edit2, GripHorizontal, Square, Circle } from 'lucide-react';
+import { Trash2, Eye, EyeOff } from 'lucide-react';
 import { Layer } from '../../types/map';
 import Chrome from '@uiw/react-color-chrome';
 
@@ -52,6 +52,7 @@ const ObjectItem: React.FC<{
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClick();
+    setEditing(true); // Enable editing mode directly on click
   };
 
   return (
@@ -68,9 +69,6 @@ const ObjectItem: React.FC<{
       onClick={handleClick}
     >
       <div className="flex items-center gap-3">
-        <div className="flex-shrink-0 cursor-grab">
-          <GripHorizontal className="text-jl-sage" size={16} />
-        </div>
 
         {/* Color Picker with Chrome Picker */}
         <div
@@ -84,41 +82,24 @@ const ObjectItem: React.FC<{
             <Chrome
               color={color}
               onChange={handleColorChange}
-              showAlpha={true} // Enable opacity slider
+              showAlpha={true}
               className="shadow-md rounded-lg"
             />
           </div>
         )}
 
         <div className="flex-grow min-w-0 flex items-center gap-2">
-          {/* Add icon based on object type */}
-          {object.type === 'polygon' && <Square className="text-jl-sage" size={16} />}
-          {object.type === 'rectangle' && <Square className="text-jl-sage" size={16} />}
-          {object.type === 'circle' && <Circle className="text-jl-sage" size={16} />}
-
           {isEditing ? (
             <input
               type="text"
               value={object.name}
               onChange={(e) => onRename(e.target.value)}
               onBlur={() => setEditing(false)}
-              onClick={(e) => e.stopPropagation()}
               className="w-full px-2 py-1 border rounded focus:border-jl-teal focus:ring-1 focus:ring-jl-teal"
               autoFocus
             />
           ) : (
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-black">{object.name}</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setEditing(true);
-                }}
-                className="opacity-0 group-hover:opacity-100 text-jl-sage hover:text-jl-teal"
-              >
-                <Edit2 size={14} />
-              </button>
-            </div>
+            <span className="font-medium text-black truncate">{object.name}</span>
           )}
         </div>
 
