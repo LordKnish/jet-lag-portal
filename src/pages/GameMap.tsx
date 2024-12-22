@@ -262,9 +262,11 @@ const GameMap: React.FC = () => {
         <Toolbar
           onToolChange={handleToolChange}
           onFillStyleChange={handleFillStyleChange}
+          fillStyle={fillStyle} // Pass the fillStyle state
           activeTool={mapMode}
           disabled={isLoading || !!error}
         />
+
       </div>
 
       {/* Main Content */}

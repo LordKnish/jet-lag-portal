@@ -20,11 +20,13 @@ import { MapMode } from '../../../types/toolbar';
 interface ToolbarProps {
   onToolChange?: (tool: MapMode) => void;
   onFillStyleChange?: (style: 'solid' | 'hashed') => void;
+  fillStyle?: 'solid' | 'hashed'; // Add this line
   onUndo?: () => void;
   onRedo?: () => void;
   activeTool?: MapMode;
   disabled?: boolean;
 }
+
 
 const ToolButton: React.FC<{
   icon: React.ReactNode;
@@ -56,11 +58,13 @@ const ToolButton: React.FC<{
 const Toolbar: React.FC<ToolbarProps> = ({
   onToolChange,
   onFillStyleChange,
+  fillStyle, 
   onUndo,
   onRedo,
   activeTool,
   disabled
 }) => {
+
   return (
     <div className="w-full bg-jl-teal border-b border-jl-sage/30 shadow-md">
       <div className="w-full">
@@ -134,7 +138,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 onToolChange?.('fill');
                 onFillStyleChange?.('hashed');
               }}
-              active={activeTool === 'fill' && onFillStyleChange && 'hashed'}
+              active={activeTool === 'fill' && fillStyle === 'hashed'}
               disabled={disabled}
             />
           </div>
