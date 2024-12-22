@@ -80,7 +80,9 @@ const CircleDrawingControl: React.FC<CircleDrawingControlProps> = ({
         (yi > y) !== (yj > y) &&
         x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
   
-      if (intersect) inside = !inside;
+      if (intersect) {
+        inside = !inside;
+      }
     }
   
     return inside;

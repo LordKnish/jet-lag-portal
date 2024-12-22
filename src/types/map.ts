@@ -16,8 +16,8 @@ export interface Layer {
   name: string;
   visible: boolean;
   color: string;
-  type: 'polygon' | 'circle' | 'rectangle'; // Includes 'rectangle'
-  data: PolygonData | CircleData | RectangleData | null; // <-- Added RectangleData here
+  type: 'polygon' | 'circle' | 'rectangle'; 
+  data: PolygonData | CircleData | RectangleData | null;
 }
 
 // Utility function to convert LatLng to Coordinate

@@ -37,7 +37,9 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
   //  Boundary Check (Optional)
   //---------------------------
   const isPointInPolygon = (point: L.LatLng, polygon: [number, number][]) => {
-    if (!polygon.length) return true; // If no boundary, always allow
+    if (!polygon.length) {
+      return true;
+    } // If no boundary, always allow
     const x = point.lng; 
     const y = point.lat;
     let inside = false;
@@ -54,7 +56,9 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
         (yi > y) !== (yj > y) &&
         x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
   
-      if (intersect) inside = !inside;
+      if (intersect) {
+        inside = !inside;
+      }
     }
     return inside;
   };

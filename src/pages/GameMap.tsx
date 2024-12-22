@@ -21,6 +21,7 @@ import CircleDrawingControl from '../components/map/CircleDrawingControl';
 import { Layer, Coordinate, latLngToCoordinate, PolygonData, CircleData, RectangleData } from '../types/map';
 import { MapMode } from '../types/toolbar';
 
+
 // Utility function to parse WKT polygon data
 const parseWKTPolygon = (wkt: string): Coordinate[] => {
   const coordsString = wkt
@@ -182,27 +183,40 @@ const GameMap: React.FC = () => {
   }, [activeLayer]);
 
   const handleRectangleComplete = useCallback(
-    (bounds: LatLngBounds) => {
-      if (activeLayer) {
-        // Ensure the data format matches RectangleData ([number, number][])
-        const rectangleData: RectangleData = [
-          [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
-          [bounds.getNorthWest().lat, bounds.getNorthWest().lng],
-          [bounds.getNorthEast().lat, bounds.getNorthEast().lng],
-          [bounds.getSouthEast().lat, bounds.getSouthEast().lng],
-        ];
-  
-        setLayers((prev) =>
-          prev.map((l) =>
-            l.id === activeLayer
-              ? { ...l, data: rectangleData, type: "rectangle" }
-              : l
-          )
-        );
+    (bounds: L.LatLngBounds) => {
+      if (!activeLayer) {
+        console.error('No active layer selected for rectangle');
+        return;
       }
-    },
-    [activeLayer]
-  );
+
+      console.log('Starting rectangle completion with bounds:', bounds);
+      console.log('Active layer:', activeLayer);
+      
+      // Create rectangle data using the corners in correct order
+      const rectangleData: RectangleData = [
+        [bounds.getNorthWest().lat, bounds.getNorthWest().lng],
+        [bounds.getNorthEast().lat, bounds.getNorthEast().lng],
+        [bounds.getSouthEast().lat, bounds.getSouthEast().lng],
+        [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
+        [bounds.getNorthWest().lat, bounds.getNorthWest().lng], // Close the polygon
+      ];
+      
+      console.log('Created rectangle data:', rectangleData);
+  
+      setLayers((prev) => {
+        return prev.map((layer) => {
+                  if (layer.id === activeLayer) {
+                    const updated: Layer = {
+                      ...layer,
+                      type: 'rectangle',
+                      data: rectangleData,
+                    };
+                    return updated;
+                  }
+                  return layer;
+                });
+      });
+    }, [activeLayer]);
 
   const handleToolChange = useCallback((tool: MapMode) => {
     setMapMode(tool);

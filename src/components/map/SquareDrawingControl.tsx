@@ -1,8 +1,7 @@
-// src/components/map/SquareDrawingControl.tsx
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Check, X } from 'lucide-react'; // Ensure correct import based on your icon library
+import { Check, X } from 'lucide-react';
 
 interface SquareDrawingControlProps {
   onSquareComplete?: (bounds: L.LatLngBounds) => void;
@@ -21,6 +20,26 @@ const SquareDrawingControl: React.FC<SquareDrawingControlProps> = ({
   const initialClickRef = useRef<L.LatLng | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // Point in polygon check
+  const isPointInPolygon = useCallback((point: L.LatLng, polygon: [number, number][]): boolean => {
+    const x = point.lng;
+    const y = point.lat;
+    let inside = false;
+
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const xi = polygon[i][1], yi = polygon[i][0];
+      const xj = polygon[j][1], yj = polygon[j][0];
+
+      const intersect = ((yi > y) !== (yj > y)) && 
+        (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) {
+        inside = !inside;
+      }
+    }
+
+    return inside;
+  }, []);
+
   const cleanupRectangle = useCallback(() => {
     if (rectangleRef.current) {
       rectangleRef.current.remove();
@@ -29,27 +48,6 @@ const SquareDrawingControl: React.FC<SquareDrawingControlProps> = ({
     initialClickRef.current = null;
     setShowConfirm(false);
   }, []);
-
-  const isPointInPolygon = (point: L.LatLng, polygon: [number, number][]): boolean => {
-    const x = point.lng;
-    const y = point.lat;
-    let inside = false;
-
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-      const yi = polygon[i][0];
-      const xi = polygon[i][1];
-      const yj = polygon[j][0];
-      const xj = polygon[j][1];
-
-      const intersect =
-        ((yi > y) !== (yj > y)) &&
-        (x < ((xj - xi) * (y - yi)) / (yj - yi) + xi);
-
-      if (intersect) inside = !inside;
-    }
-
-    return inside;
-  };
 
   useEffect(() => {
     if (isEnabled) {
@@ -69,54 +67,79 @@ const SquareDrawingControl: React.FC<SquareDrawingControlProps> = ({
     }
 
     const handleMouseDown = (e: L.LeafletMouseEvent) => {
+      // Check if initial click is within boundary
       if (!isPointInPolygon(e.latlng, boundary)) {
-        return; // Do not start drawing if click is outside boundary
+        return;
       }
 
-      // Clean up any existing rectangle
       cleanupRectangle();
-
       initialClickRef.current = e.latlng;
 
-      // Create initial rectangle with zero area
-      const rectangle = L.rectangle([e.latlng, e.latlng], {
-        color: '#FF4500', // Customize color as needed
+      // Convert LatLng to LatLngTuple [lat, lng]
+      const initialPoint: L.LatLngTuple = [e.latlng.lat, e.latlng.lng];
+      const rectangle = L.rectangle([initialPoint, initialPoint], {
+        color: '#FF4500',
         weight: 2,
         fillOpacity: 0.2,
       }).addTo(map);
       rectangleRef.current = rectangle;
 
       const handleMouseMove = (moveEvent: L.LeafletMouseEvent) => {
-        if (!rectangleRef.current || !initialClickRef.current) return;
-
-        const currentLatLng = moveEvent.latlng;
-
-        // Define bounds from initial click to current mouse position
-        const bounds = L.latLngBounds(
-          [initialClickRef.current.lat, initialClickRef.current.lng],
-          [currentLatLng.lat, currentLatLng.lng]
+        if (!rectangleRef.current || !initialClickRef.current) {
+          return;
+        }
+        
+        // Create bounds from initial click and current mouse position
+        const sw = L.latLng(
+          Math.min(initialClickRef.current.lat, moveEvent.latlng.lat),
+          Math.min(initialClickRef.current.lng, moveEvent.latlng.lng)
+        );
+        const ne = L.latLng(
+          Math.max(initialClickRef.current.lat, moveEvent.latlng.lat),
+          Math.max(initialClickRef.current.lng, moveEvent.latlng.lng)
         );
         
+        const bounds = L.latLngBounds(sw, ne);
+        rectangleRef.current.setBounds(bounds);
 
-        // Ensure that the new bounds are within the boundary polygon
-        const allPointsInside = [
-          [bounds.getSouthWest().lat, bounds.getSouthWest().lng],
-          [bounds.getNorthWest().lat, bounds.getNorthWest().lng],
-          [bounds.getNorthEast().lat, bounds.getNorthEast().lng],
-          [bounds.getSouthEast().lat, bounds.getSouthEast().lng],
-        ].every(([lat, lng]) => isPointInPolygon(L.latLng(lat, lng), boundary));
+        // Check if all corners are within boundary
+        const corners = [
+          bounds.getNorthWest(),
+          bounds.getNorthEast(),
+          bounds.getSouthEast(),
+          bounds.getSouthWest()
+        ];
         
+        const allCornersInside = corners.every(corner => isPointInPolygon(corner, boundary));
 
-        if (allPointsInside) {
-          rectangleRef.current.setBounds(bounds);
-        } else {
-          // Optionally, provide visual feedback if outside boundary
-          // For simplicity, we prevent updating the bounds
-        }
+        // Update rectangle style based on validity
+        rectangleRef.current.setStyle({
+          color: allCornersInside ? '#FF4500' : '#FF0000',
+          fillColor: allCornersInside ? '#FF4500' : '#FF0000',
+          fillOpacity: allCornersInside ? 0.2 : 0.1,
+          weight: 2,
+          dashArray: allCornersInside ? undefined : '5,5'
+        });
       };
 
       const handleMouseUp = () => {
-        setShowConfirm(true);
+        if (rectangleRef.current) {
+          const bounds = rectangleRef.current.getBounds();
+          const corners = [
+            bounds.getNorthWest(),
+            bounds.getNorthEast(),
+            bounds.getSouthEast(),
+            bounds.getSouthWest()
+          ];
+          
+          const allCornersInside = corners.every(corner => isPointInPolygon(corner, boundary));
+          
+          if (allCornersInside) {
+            setShowConfirm(true);
+          } else {
+            cleanupRectangle();
+          }
+        }
         map.off('mousemove', handleMouseMove);
         map.off('mouseup', handleMouseUp);
       };
@@ -130,13 +153,27 @@ const SquareDrawingControl: React.FC<SquareDrawingControlProps> = ({
     return () => {
       map.off('mousedown', handleMouseDown);
     };
-  }, [map, isEnabled, boundary, cleanupRectangle]);
+  }, [map, isEnabled, cleanupRectangle, boundary, isPointInPolygon]);
 
   const handleConfirm = () => {
     if (rectangleRef.current && onSquareComplete) {
-      onSquareComplete(rectangleRef.current.getBounds());
+      const bounds = rectangleRef.current.getBounds();
+      console.log('SquareDrawingControl - Confirming rectangle with bounds:', {
+        northEast: bounds.getNorthEast(),
+        southWest: bounds.getSouthWest(),
+        northWest: bounds.getNorthWest(),
+        southEast: bounds.getSouthEast()
+      });
+      onSquareComplete(bounds);
+      console.log('SquareDrawingControl - Called onSquareComplete');
+      cleanupRectangle();
+      console.log('SquareDrawingControl - Cleaned up rectangle');
+    } else {
+      console.warn('SquareDrawingControl - Missing rectangle reference or callback:', {
+        hasRectangle: !!rectangleRef.current,
+        hasCallback: !!onSquareComplete
+      });
     }
-    cleanupRectangle();
   };
 
   const handleCancel = () => {
@@ -146,7 +183,7 @@ const SquareDrawingControl: React.FC<SquareDrawingControlProps> = ({
   return (
     <>
       {isEnabled && (
-        <div className="absolute top-4 right-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg z-[1000]">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg z-[1000]">
           <span className="text-sm font-medium text-gray-700">
             Click and drag to draw rectangle
           </span>
@@ -155,7 +192,7 @@ const SquareDrawingControl: React.FC<SquareDrawingControlProps> = ({
       {showConfirm && (
         <div
           ref={confirmContainerRef}
-          className="absolute bottom-4 right-1/2 transform -translate-x-1/2 bg-white rounded-full shadow-lg z-[1000]"
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-lg z-[1000]"
         >
           <div className="flex items-center gap-2 p-2">
             <button
