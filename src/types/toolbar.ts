@@ -5,6 +5,7 @@ export type MapMode =
   | 'erase' 
   | 'radar' 
   | 'rectangle' 
+  | 'circle'
   | 'select' 
   | 'fill' 
   | 'measure' 

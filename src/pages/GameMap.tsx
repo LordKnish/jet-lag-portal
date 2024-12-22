@@ -326,6 +326,7 @@ const GameMap: React.FC = () => {
             <CircleDrawingControl 
               onCircleComplete={handleCircleComplete}
               isEnabled={mapMode === 'circle'}
+              boundary={boundary}  // Add this line
             />
           </MapContainer>
         </div>
