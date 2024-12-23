@@ -22,6 +22,7 @@ import MapClickHandler from '../components/map/MapClickHandler';
 import { Layer, Coordinate, PolygonData, CircleData, RectangleData } from '../types/map';
 import { MapMode } from '../types/toolbar';
 import MeasurementControl from '../components/map/Measurementcontrol';
+import GpsControl from '../components/map/GpsControl';
 
 const parseWKTPolygon = (wkt: string): Coordinate[] => {
   const coordsString = wkt.replace(/POLYGON\s*\(\((.*)\)\)/i, '$1').trim();
@@ -42,6 +43,7 @@ const GameMap: React.FC = () => {
   const [fillStyle, setFillStyle] = useState<'solid' | 'hashed'>('solid');
   const apiKey = import.meta.env.VITE_THUNDERFOREST_API_KEY || '';
   const defaultCenter: Coordinate = useMemo(() => [32.07, 34.7674], []);
+  const [gpsEnabled, setGpsEnabled] = useState(false);
 
   // Create new shape object
   const handleAddObject = useCallback(
@@ -186,12 +188,17 @@ const GameMap: React.FC = () => {
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden relative">
       <Toolbar
-        onToolChange={setMapMode}
-        onFillStyleChange={setFillStyle}
-        fillStyle={fillStyle}
-        activeTool={mapMode}
+        onToolChange={(tool) => {
+          if (tool === 'gps') {
+            setGpsEnabled((prev) => !prev); // Toggle GPS state
+          } else {
+            setMapMode(tool);
+          }
+        }}
+        activeTool={gpsEnabled ? 'gps' : mapMode}
         disabled={isLoading || !!error}
       />
+
       <div className="flex-1 flex overflow-hidden w-full">
         <div className="flex-1 relative w-full">
           <MapContainer center={defaultCenter} zoom={14} className="h-full w-full" zoomControl={false}>
@@ -326,7 +333,7 @@ const GameMap: React.FC = () => {
             />
 
             <MeasurementControl isEnabled={mapMode === 'measure'} /> // Use it within the MapContainer
-
+            <GpsControl gpsEnabled={gpsEnabled} />
           </MapContainer>
         </div>
 

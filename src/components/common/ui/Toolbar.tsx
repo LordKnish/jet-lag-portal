@@ -1,5 +1,4 @@
-// src/components/common/ui/Toolbar.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   PencilLine,
   Eraser,
@@ -15,20 +14,21 @@ import {
   MapPin,
   Hash,
   ArrowsOutCardinal,
-  Polygon
+  Polygon,
+  Gps,
+  GpsFix
 } from "@phosphor-icons/react";
 import { MapMode } from '../../../types/toolbar';
 
 interface ToolbarProps {
   onToolChange?: (tool: MapMode) => void;
   onFillStyleChange?: (style: 'solid' | 'hashed') => void;
-  fillStyle?: 'solid' | 'hashed'; // Add this line
+  fillStyle?: 'solid' | 'hashed';
   onUndo?: () => void;
   onRedo?: () => void;
   activeTool?: MapMode;
   disabled?: boolean;
 }
-
 
 const ToolButton: React.FC<{
   icon: React.ReactNode;
@@ -66,12 +66,17 @@ const Toolbar: React.FC<ToolbarProps> = ({
   activeTool,
   disabled
 }) => {
+  const [gpsEnabled, setGpsEnabled] = useState(false);
+
+  const handleGpsToggle = () => {
+    setGpsEnabled(prev => !prev);
+    onToolChange?.('gps');
+  };
 
   return (
     <div className="w-full bg-jl-teal border-b border-jl-sage/30 shadow-md">
       <div className="w-full">
         <div className="flex items-center h-14 gap-1 px-2">
-          {/* Navigation Tools Group */}
           <div className="flex items-center gap-1 pr-3 border-r border-jl-sage/30">
             <ToolButton
               icon={<Hand size={24} weight="bold" />}
@@ -82,7 +87,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
             />
           </div>
 
-          {/* Drawing Tools Group */}
           <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
             <ToolButton
               icon={<Polygon size={24} weight="bold" />}
@@ -107,7 +111,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
             />
           </div>
 
-          {/* Shape Manipulation Tools */}
           <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
             <ToolButton
               icon={<SelectionAll size={24} weight="duotone" />}
@@ -132,7 +135,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
             />
           </div>
 
-          {/* Measurement Tools */}
           <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
             <ToolButton
               icon={<Ruler size={24} weight="duotone" />}
@@ -157,7 +159,18 @@ const Toolbar: React.FC<ToolbarProps> = ({
             />
           </div>
 
-          {/* History Controls */}
+          <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
+            <ToolButton
+              icon={gpsEnabled 
+                ? <GpsFix size={24} weight="bold" /> 
+                : <Gps size={24} weight="duotone" />}
+              label="Enable/Disable GPS"
+              onClick={handleGpsToggle}
+              active={gpsEnabled}
+              disabled={false}
+            />
+          </div>
+
           <div className="flex items-center gap-1 ml-auto">
             <ToolButton
               icon={<ArrowCounterClockwise size={24} weight="bold" />}
