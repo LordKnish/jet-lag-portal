@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Trash2, Eye, EyeOff } from 'lucide-react';
-import { Layer } from '../../types/map';
+import { CircleData, Coordinate, Layer, RectangleData } from '../../types/map';
 import Chrome from '@uiw/react-color-chrome';
 
 interface ObjectPanelProps {
@@ -55,6 +55,45 @@ const ObjectItem: React.FC<{
     setEditing(true); // Enable editing mode directly on click
   };
 
+  // Helper function to get size description
+  const getObjectSizeDescription = (object: Layer) => {
+    if (!object.data) {
+      return ''; // Handle case where data is null
+    }
+  
+    // Circle - Display radius
+    if (object.type === 'circle' && 'radius' in object.data) {
+      const circleData = object.data as CircleData;
+      return `Radius: ${circleData.radius} m`;
+    }
+  
+    // Polygon and Rectangle - Calculate area
+    if (object.type === 'polygon' || object.type === 'rectangle') {
+      const polygonData = object.data as Coordinate[]; // Treat as array of coordinates
+  
+      // Shoelace formula to calculate area
+      const calculateArea = (coords: Coordinate[]) => {
+        let area = 0;
+        const n = coords.length;
+        for (let i = 0; i < n; i++) {
+          const [lat1, lng1] = coords[i];
+          const [lat2, lng2] = coords[(i + 1) % n]; // Next vertex (wraps around)
+          area += (lng1 * lat2 - lng2 * lat1); // Shoelace formula
+        }
+        return Math.abs(area * 0.5 * 111320 * 110540); // Convert lat/lng degrees to meters²
+      };
+  
+      const area = calculateArea(polygonData);
+      return `Area: ${area.toFixed(1)} m²`;
+    }
+  
+    return ''; // Default for unsupported types
+  };
+  
+  
+  
+
+
   return (
     <div
       className={`
@@ -99,7 +138,13 @@ const ObjectItem: React.FC<{
               autoFocus
             />
           ) : (
-            <span className="font-medium text-black truncate">{object.name}</span>
+            <div className="flex flex-col">
+              <span className="font-medium text-black truncate">{object.name}</span>
+              <span className="text-xs text-gray-500">
+                {getObjectSizeDescription(object)}
+              </span>
+            </div>
+
           )}
         </div>
 
