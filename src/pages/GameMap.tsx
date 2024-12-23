@@ -22,7 +22,7 @@ import MoveTool from '../components/map/MoveTool';
 import MapClickHandler from '../components/map/MapClickHandler';
 import { Layer, Coordinate, PolygonData, CircleData, RectangleData } from '../types/map';
 import { MapMode } from '../types/toolbar';
-import MeasurementControl from '../components/map/Measurementcontrol';
+import MeasurementControl from '../components/map/MeasurementControl';
 import GpsControl from '../components/map/GpsControl';
 
 const parseWKTPolygon = (wkt: string): Coordinate[] => {
