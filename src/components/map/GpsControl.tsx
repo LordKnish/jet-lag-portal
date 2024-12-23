@@ -9,6 +9,8 @@ interface GpsControlProps {
 const GpsControl: React.FC<GpsControlProps> = ({ gpsEnabled }) => {
   const map = useMap();
   const [marker, setMarker] = useState<L.Marker | null>(null);
+  const [userLocation, setUserLocation] = useState<L.LatLng | null>(null);
+  const snapThreshold = 200; // meters
 
   useEffect(() => {
     if (!gpsEnabled) {
@@ -18,7 +20,12 @@ const GpsControl: React.FC<GpsControlProps> = ({ gpsEnabled }) => {
       }
       return;
     }
-
+    const snapIcon = L.divIcon({
+      className: 'custom-gps-icon-snap',
+      html: `<div class="gps-marker gps-marker-snap"></div>`, // Different style for snap
+      iconSize: [40, 40],
+      iconAnchor: [20, 20]
+    });
     const gpsIcon = L.divIcon({
       className: 'custom-gps-icon',
       html: `
@@ -32,6 +39,7 @@ const GpsControl: React.FC<GpsControlProps> = ({ gpsEnabled }) => {
       iconSize: [40, 40],
       iconAnchor: [20, 20]
     });
+    const defaultIcon = gpsIcon; // Original icon
 
     const style = document.createElement('style');
     style.textContent = `
@@ -95,12 +103,22 @@ const GpsControl: React.FC<GpsControlProps> = ({ gpsEnabled }) => {
       (position) => {
         const { latitude, longitude } = position.coords;
         const latlng = L.latLng(latitude, longitude);
-
+    
         if (!marker) {
           const newMarker = L.marker(latlng, { icon: gpsIcon }).addTo(map);
           setMarker(newMarker);
         } else {
           marker.setLatLng(latlng);
+    
+          // Snap feedback logic here
+          if (gpsEnabled && userLocation !== null) { // Ensure GPS is on and userLocation exists
+            const distance = marker.getLatLng().distanceTo(userLocation);
+            if (distance <= snapThreshold) {
+              marker.setIcon(snapIcon); // Use snap style
+            } else {
+              marker.setIcon(defaultIcon); // Use default style
+            }
+          }
         }
       },
       (error) => {
@@ -109,9 +127,10 @@ const GpsControl: React.FC<GpsControlProps> = ({ gpsEnabled }) => {
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 0
+        maximumAge: 0,
       }
     );
+    
 
     return () => {
       navigator.geolocation.clearWatch(watchId);

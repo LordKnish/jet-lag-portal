@@ -45,6 +45,7 @@ const GameMap: React.FC = () => {
   const apiKey = import.meta.env.VITE_THUNDERFOREST_API_KEY || '';
   const defaultCenter: Coordinate = useMemo(() => [32.07, 34.7674], []);
   const [gpsEnabled, setGpsEnabled] = useState(false); // Separate GPS state
+  const [userLocation, setUserLocation] = useState<L.LatLng | null>(null);
 
   // Create new shape object
   const handleAddObject = useCallback(
@@ -204,7 +205,18 @@ const GameMap: React.FC = () => {
     });
   }, []); // Empty dependency array ensures stable callback
   
+  useEffect(() => {
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation(L.latLng(latitude, longitude));
+      },
+      (error) => console.error('GPS Error:', error.message),
+      { enableHighAccuracy: true }
+    );
   
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
   
 
   return (
@@ -354,7 +366,10 @@ const GameMap: React.FC = () => {
               }
               isEnabled={mapMode === 'circle'}
               boundary={boundary}
+              gpsEnabled={gpsEnabled} // Pass GPS toggle state
+              userLocation={userLocation} // Pass GPS coordinates
             />
+
 
             <MeasurementControl isEnabled={mapMode === 'measure'} />
             <GpsControl gpsEnabled={gpsEnabled} />
