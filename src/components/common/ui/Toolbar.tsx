@@ -21,6 +21,8 @@ import {
 import { MapMode } from '../../../types/toolbar';
 
 interface ToolbarProps {
+  gpsEnabled?: boolean; // Add this line
+  onGpsToggle?: () => void; // Add this line
   onToolChange?: (tool: MapMode) => void;
   onFillStyleChange?: (style: 'solid' | 'hashed') => void;
   fillStyle?: 'solid' | 'hashed';
@@ -29,6 +31,7 @@ interface ToolbarProps {
   activeTool?: MapMode;
   disabled?: boolean;
 }
+
 
 const ToolButton: React.FC<{
   icon: React.ReactNode;
@@ -58,20 +61,25 @@ const ToolButton: React.FC<{
 );
 
 const Toolbar: React.FC<ToolbarProps> = ({
+  gpsEnabled = false, // Default value
+  onGpsToggle,
   onToolChange,
   onFillStyleChange,
-  fillStyle, 
+  fillStyle,
   onUndo,
   onRedo,
   activeTool,
-  disabled
+  disabled,
 }) => {
-  const [gpsEnabled, setGpsEnabled] = useState(false);
-
+  console.log('Toolbar Props - gpsEnabled:', gpsEnabled);
+  console.log('Toolbar Props - onGpsToggle:', onGpsToggle);
   const handleGpsToggle = () => {
-    setGpsEnabled(prev => !prev);
-    onToolChange?.('gps');
+    console.log('GPS Toggle clicked!'); // Log click event
+    if (onGpsToggle) {
+      onGpsToggle(); // Invoke parent callback to toggle GPS
+    }
   };
+  
 
   return (
     <div className="w-full bg-jl-teal border-b border-jl-sage/30 shadow-md">
@@ -161,14 +169,13 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
           <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
             <ToolButton
-              icon={gpsEnabled 
-                ? <GpsFix size={24} weight="bold" /> 
-                : <Gps size={24} weight="duotone" />}
-              label="Enable/Disable GPS"
-              onClick={handleGpsToggle}
-              active={gpsEnabled}
-              disabled={false}
+              icon={gpsEnabled ? <GpsFix size={24} /> : <Gps size={24} />}
+              label="Toggle GPS"
+              onClick={handleGpsToggle} // Ensure callback triggers
+              active={gpsEnabled} // Ensure visual toggle
+              disabled={disabled}
             />
+
           </div>
 
           <div className="flex items-center gap-1 ml-auto">

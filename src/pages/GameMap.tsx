@@ -1,4 +1,5 @@
 // src/pages/GameMap.tsx
+
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   MapContainer,
@@ -43,7 +44,7 @@ const GameMap: React.FC = () => {
   const [fillStyle, setFillStyle] = useState<'solid' | 'hashed'>('solid');
   const apiKey = import.meta.env.VITE_THUNDERFOREST_API_KEY || '';
   const defaultCenter: Coordinate = useMemo(() => [32.07, 34.7674], []);
-  const [gpsEnabled, setGpsEnabled] = useState(false);
+  const [gpsEnabled, setGpsEnabled] = useState(false); // Separate GPS state
 
   // Create new shape object
   const handleAddObject = useCallback(
@@ -136,6 +137,7 @@ const GameMap: React.FC = () => {
             throw new Error('Invalid boundary data format');
           }
         }
+        setIsLoading(false);
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Failed to load game boundary';
@@ -185,19 +187,42 @@ const GameMap: React.FC = () => {
     }
   }, [objects]);
 
+  // Handle tool changes
+  const handleToolChange = (tool: MapMode | null) => {
+    if (tool === 'gps') {
+      setGpsEnabled(prev => !prev); // Toggle GPS state
+    } else {
+      setMapMode(tool);
+    }
+  };
+
+  // Handle GPS toggle
+  const handleGpsToggle = useCallback(() => {
+    setGpsEnabled(prev => {
+      const newState = !prev;
+      console.log('GPS State toggled:', newState); // Debug log
+      return newState;
+    });
+  }, []); // Empty dependency array ensures stable callback
+  
+  
+  
+
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden relative">
       <Toolbar
-        onToolChange={(tool) => {
-          if (tool === 'gps') {
-            setGpsEnabled((prev) => !prev); // Toggle GPS state
-          } else {
-            setMapMode(tool);
-          }
-        }}
-        activeTool={gpsEnabled ? 'gps' : mapMode}
+        onToolChange={handleToolChange}
+        activeTool={mapMode}
+        gpsEnabled={gpsEnabled} // Pass state
+        onGpsToggle={handleGpsToggle} // Pass callback explicitly
         disabled={isLoading || !!error}
+        onUndo={() => console.log('Undo action triggered')}
+        onRedo={() => console.log('Redo action triggered')}
+        onFillStyleChange={(style) => setFillStyle(style)}
+        fillStyle={fillStyle}
       />
+
+
 
       <div className="flex-1 flex overflow-hidden w-full">
         <div className="flex-1 relative w-full">
@@ -332,7 +357,7 @@ const GameMap: React.FC = () => {
               boundary={boundary}
             />
 
-            <MeasurementControl isEnabled={mapMode === 'measure'} /> // Use it within the MapContainer
+            <MeasurementControl isEnabled={mapMode === 'measure'} />
             <GpsControl gpsEnabled={gpsEnabled} />
           </MapContainer>
         </div>
