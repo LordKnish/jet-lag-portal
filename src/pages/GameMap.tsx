@@ -21,6 +21,7 @@ import MoveTool from '../components/map/MoveTool';
 import MapClickHandler from '../components/map/MapClickHandler';
 import { Layer, Coordinate, PolygonData, CircleData, RectangleData } from '../types/map';
 import { MapMode } from '../types/toolbar';
+import MeasurementControl from '../components/map/Measurementcontrol';
 
 const parseWKTPolygon = (wkt: string): Coordinate[] => {
   const coordsString = wkt.replace(/POLYGON\s*\(\((.*)\)\)/i, '$1').trim();
@@ -323,6 +324,9 @@ const GameMap: React.FC = () => {
               isEnabled={mapMode === 'circle'}
               boundary={boundary}
             />
+
+            <MeasurementControl isEnabled={mapMode === 'measure'} /> // Use it within the MapContainer
+
           </MapContainer>
         </div>
 
