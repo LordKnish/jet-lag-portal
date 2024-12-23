@@ -11,7 +11,6 @@ const GpsControl: React.FC<GpsControlProps> = ({ gpsEnabled }) => {
   const [marker, setMarker] = useState<L.Marker | null>(null);
 
   useEffect(() => {
-    console.log('GpsControl - gpsEnabled:', gpsEnabled); // Confirm state update
     if (!gpsEnabled) {
       if (marker) {
         map.removeLayer(marker);

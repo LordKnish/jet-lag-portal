@@ -71,10 +71,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   activeTool,
   disabled,
 }) => {
-  console.log('Toolbar Props - gpsEnabled:', gpsEnabled);
-  console.log('Toolbar Props - onGpsToggle:', onGpsToggle);
   const handleGpsToggle = () => {
-    console.log('GPS Toggle clicked!'); // Log click event
     if (onGpsToggle) {
       onGpsToggle(); // Invoke parent callback to toggle GPS
     }

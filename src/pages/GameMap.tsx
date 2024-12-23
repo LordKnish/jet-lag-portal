@@ -200,7 +200,6 @@ const GameMap: React.FC = () => {
   const handleGpsToggle = useCallback(() => {
     setGpsEnabled(prev => {
       const newState = !prev;
-      console.log('GPS State toggled:', newState); // Debug log
       return newState;
     });
   }, []); // Empty dependency array ensures stable callback
