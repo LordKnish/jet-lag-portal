@@ -26,6 +26,7 @@ import { MapMode } from '../types/toolbar';
 import MeasurementControl from '../components/map/MeasurementControl';
 import GpsControl from '../components/map/GpsControl';
 import MarkerControl from '../components/map/MarkerControl';
+import SetMaxBounds from '../components/map/SetMaxBounds';
 
 const parseWKTPolygon = (wkt: string): Coordinate[] => {
   const coordsString = wkt.replace(/POLYGON\s*\(\((.*)\)\)/i, '$1').trim();
@@ -220,6 +221,24 @@ const GameMap: React.FC = () => {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
+  const paddedBoundary = useMemo(() => {
+    if (boundary.length === 0) return null;
+
+    const latLngBoundary = boundary.map(([lat, lng]) => L.latLng(lat, lng));
+    const latLngBounds = L.latLngBounds(latLngBoundary);
+    return latLngBounds.pad(0.1);
+  }, [boundary]);
+
+  // Ensure the default center is within the boundary if available
+  const initialCenter = useMemo(() => {
+    if (paddedBoundary) {
+      return paddedBoundary.getCenter();
+    }
+    return defaultCenter;
+  }, [paddedBoundary, defaultCenter]);
+  
+  
+
   const handleMarkerCreate = useCallback((markerData: MarkerData) => {
     const newObject: Layer = {
       id: `marker-${Date.now()}`,
@@ -251,7 +270,15 @@ const GameMap: React.FC = () => {
 
       <div className="flex-1 flex overflow-hidden w-full">
         <div className="flex-1 relative w-full">
-          <MapContainer center={defaultCenter} zoom={14} className="h-full w-full" zoomControl={false}>
+        <MapContainer
+            center={initialCenter} // Use the calculated initial center
+            zoom={14}
+            className="h-full w-full"
+            zoomControl={false}
+            maxZoom={19} // Optionally set a max zoom level
+          >
+            <SetMaxBounds bounds={paddedBoundary} /> {/* Add the custom component */}
+
             <FeatureGroup ref={objectLayerRef} />
 
             {/* Handles map clicks for shape selection, etc. */}
