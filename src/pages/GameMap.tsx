@@ -295,6 +295,7 @@ const GameMap: React.FC = () => {
               mapMode={mapMode}
               objects={objects}
               setActiveObject={setActiveObject}
+              onDeleteObject={handleDeleteObject} // Pass the deletion callback
             />
 
             {/* MoveTool only when we're in 'move' mode */}

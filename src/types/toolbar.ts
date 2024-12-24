@@ -7,7 +7,7 @@ export type MapMode =
   | 'rectangle' 
   | 'circle'
   | 'select' 
-  | 'fill' 
+  | 'delete' 
   | 'measure' 
   | 'rings' 
   | 'marker'

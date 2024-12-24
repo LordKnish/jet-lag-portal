@@ -10,7 +10,7 @@ import {
   Hand,
   Circle,
   Square,
-  SelectionAll,
+  Trash,
   MapPin,
   Hash,
   ArrowsOutCardinal,
@@ -129,6 +129,13 @@ const Toolbar: React.FC<ToolbarProps> = ({
               label="Edit Shape"
               onClick={() => onToolChange?.('edit')}
               active={activeTool === 'edit'}
+              disabled={false}
+            />
+            <ToolButton
+              icon={<Eraser size={24} weight="bold" />}
+              label="Erase"
+              onClick={() => onToolChange?.('delete')}
+              active={activeTool === 'delete'}
               disabled={false}
             />
           </div>
