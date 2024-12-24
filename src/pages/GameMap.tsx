@@ -28,6 +28,7 @@ import GpsControl from '../components/map/GpsControl';
 import MarkerControl from '../components/map/MarkerControl';
 import SetMaxBounds from '../components/map/SetMaxBounds';
 import { ChevronUp, ChevronDown } from 'lucide-react';
+import UndoRedoManager from '../utils/UndoRedoManager';
 
 const parseWKTPolygon = (wkt: string): Coordinate[] => {
   const coordsString = wkt.replace(/POLYGON\s*\(\((.*)\)\)/i, '$1').trim();
@@ -51,8 +52,29 @@ const GameMap: React.FC = () => {
   const [gpsEnabled, setGpsEnabled] = useState(false); // Separate GPS state
   const [userLocation, setUserLocation] = useState<L.LatLng | null>(null);
   const [isPanelVisible, setPanelVisible] = useState(false);
+  const undoRedoManager = useRef(new UndoRedoManager(10)); // Limit to 10 states
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const togglePanel = useCallback(() => {
     setPanelVisible(prev => !prev);
+  }, []);
+
+  const saveStateToUndoRedo = useCallback((newState: Layer[]) => {
+    // Convert our Layer[] to the narrow ObjectState[] if needed
+    undoRedoManager.current.addState(
+      newState.map(obj => ({
+        id: obj.id,
+        name: obj.name,
+        type: obj.type as 'rectangle' | 'circle' | 'marker' | 'polygon',
+        data: obj.data,
+        color: obj.color,
+        opacity: obj.opacity,
+        visible: obj.visible,
+      }))
+    );
+    // Update canUndo/canRedo after adding a new snapshot
+    setCanUndo(undoRedoManager.current.canUndo());
+    setCanRedo(undoRedoManager.current.canRedo());
   }, []);
   // Create new shape object
   const handleAddObject = useCallback(
@@ -60,49 +82,70 @@ const GameMap: React.FC = () => {
       type: 'polygon' | 'circle' | 'rectangle',
       data: PolygonData | CircleData | RectangleData
     ) => {
-      const count = objects.filter(obj => obj.type === type).length + 1;
-      const newObject: Layer = {
-        id: `object-${Date.now()}`,
-        name: `${type.charAt(0).toUpperCase() + type.slice(1)} ${count}`,
-        visible: true,
-        color: `#${Math.floor(Math.random() * 16777215)
-          .toString(16)
-          .padStart(6, '0')}`,
-        opacity: 0.4,
-        type,
-        data,
-      };
-      setObjects(prev => [...prev, newObject]);
+      setObjects(prev => {
+        const count = prev.filter(obj => obj.type === type).length + 1;
+        const newObject: Layer = {
+          id: `object-${Date.now()}`,
+          name: `${type.charAt(0).toUpperCase() + type.slice(1)} ${count}`,
+          visible: true,
+          color: `#${Math.floor(Math.random() * 16777215)
+            .toString(16)
+            .padStart(6, '0')}`,
+          opacity: 0.4,
+          type,
+          data,
+        };
+        const updated = [...prev, newObject];
+        // Immediately save the new state to Undo/Redo for reliability
+        saveStateToUndoRedo(updated);
+        return updated;
+      });
     },
-    [objects]
+    [saveStateToUndoRedo]
   );
 
   // Update shape data
   const handleUpdateObject = useCallback(
     (id: string, newData: Coordinate[] | CircleData | null) => {
-      if (!newData) {
-        return;
-      }
-      setObjects(prev =>
-        prev.map(obj => {
-          if (obj.id === id) {
-            // If it's a circle, we expect { center, radius }
-            if (obj.type === 'circle' && 'center' in newData) {
-              return { ...obj, data: { center: newData.center, radius: newData.radius } };
-            }
-            // Otherwise, treat as array of coordinates (polygon/rectangle)
-            return { ...obj, data: newData as Coordinate[] };
+      if (!newData) return;
+  
+      setObjects(prev => {
+        const updated = prev.map(obj => {
+          if (obj.id !== id) return obj;
+  
+          // Explicitly handle circle data
+          if (obj.type === 'circle') {
+            // Make sure newData is actually CircleData
+            const circleData = newData as CircleData;
+            return {
+              ...obj,
+              data: {
+                center: circleData.center,
+                radius: circleData.radius,
+              },
+            };
           }
-          return obj;
-        })
-      );
+  
+          // Otherwise (polygon or rectangle), treat as coordinates array
+          return { ...obj, data: newData as Coordinate[] };
+        });
+  
+        // Ensure circle updates are captured by undo/redo
+        saveStateToUndoRedo(updated);
+  
+        return updated;
+      });
     },
-    []
+    [saveStateToUndoRedo]
   );
 
   const handleDeleteObject = useCallback((id: string) => {
-    setObjects(prev => prev.filter(obj => obj.id !== id));
-  }, []);
+    setObjects(prev => {
+      const updated = prev.filter(obj => obj.id !== id);
+      saveStateToUndoRedo(updated); // <-- capture deletion for undo/redo
+      return updated;
+    });
+  }, [saveStateToUndoRedo]);
 
   const handleToggleObject = useCallback((id: string) => {
     setObjects(prev =>
@@ -117,6 +160,46 @@ const GameMap: React.FC = () => {
       )
     );
   }, []);
+
+  // src/pages/GameMap.tsx
+
+  const handleUndo = useCallback(() => {
+    if (mapMode === 'circle') {
+      setMapMode(null);
+    }
+    const prevState = undoRedoManager.current.undo();
+    if (prevState) {
+      // Convert from stored state to the local `Layer` type
+      setObjects(
+        prevState.map(obj => ({
+          ...obj,
+          type: obj.type as Layer['type'],
+        }))
+      );
+    }
+    // Always refresh the canUndo/canRedo flags
+    setCanUndo(undoRedoManager.current.canUndo());
+    setCanRedo(undoRedoManager.current.canRedo());
+  }, []);
+
+
+  // src/pages/GameMap.tsx
+
+  const handleRedo = useCallback(() => {
+    const nextState = undoRedoManager.current.redo();
+    if (nextState) {
+      setObjects(
+        nextState.map(obj => ({
+          ...obj,
+          type: obj.type as 'rectangle' | 'circle' | 'marker' | 'polygon' // Explicit cast
+        }))
+      );
+      setCanUndo(undoRedoManager.current.canUndo());
+      setCanRedo(undoRedoManager.current.canRedo());
+    }
+  }, []);
+
+
 
   const handleRenameObject = useCallback((id: string, name: string) => {
     setObjects(prev => prev.map(obj => (obj.id === id ? { ...obj, name } : obj)));
@@ -245,31 +328,38 @@ const GameMap: React.FC = () => {
 
 
   const handleMarkerCreate = useCallback((markerData: MarkerData) => {
-    const newObject: Layer = {
-      id: `marker-${Date.now()}`,
-      name: markerData.label,
-      visible: true,
-      color: markerData.color, // Use the color from markerData
-      opacity: 0.4,
-      type: 'marker',
-      data: markerData
-    };
-    setObjects(prev => [...prev, newObject]);
-  }, []);
+    setObjects(prev => {
+      const newObject: Layer = {
+        id: `marker-${Date.now()}`,
+        name: markerData.label,
+        visible: true,
+        color: markerData.color,
+        opacity: 0.4,
+        type: 'marker',
+        data: markerData,
+      };
+      const updated = [...prev, newObject];
+      saveStateToUndoRedo(updated); // <-- capture new marker creation for undo/redo
+      return updated;
+    });
+  }, [saveStateToUndoRedo]);
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden relative bg-white">
       <Toolbar
         onToolChange={handleToolChange}
         activeTool={mapMode}
-        gpsEnabled={gpsEnabled} // Pass state
-        onGpsToggle={handleGpsToggle} // Pass callback explicitly
+        gpsEnabled={gpsEnabled}
+        onGpsToggle={handleGpsToggle}
         disabled={isLoading || !!error}
-        onUndo={() => console.log('Undo action triggered')}
-        onRedo={() => console.log('Redo action triggered')}
+        onUndo={handleUndo} // Linked
+        onRedo={handleRedo} // Linked
+        canUndo={canUndo} // Dynamic state
+        canRedo={canRedo} // Dynamic state
         onFillStyleChange={(style) => setFillStyle(style)}
         fillStyle={fillStyle}
       />
+
 
 
 

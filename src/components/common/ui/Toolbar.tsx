@@ -21,16 +21,19 @@ import {
 import { MapMode } from '../../../types/toolbar';
 
 interface ToolbarProps {
-  gpsEnabled?: boolean; // Add this line
-  onGpsToggle?: () => void; // Add this line
+  gpsEnabled?: boolean;
+  onGpsToggle?: () => void;
   onToolChange?: (tool: MapMode) => void;
   onFillStyleChange?: (style: 'solid' | 'hashed') => void;
   fillStyle?: 'solid' | 'hashed';
   onUndo?: () => void;
   onRedo?: () => void;
+  canUndo?: boolean; // Added
+  canRedo?: boolean; // Added
   activeTool?: MapMode;
   disabled?: boolean;
 }
+
 
 
 const ToolButton: React.FC<{
