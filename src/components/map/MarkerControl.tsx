@@ -37,8 +37,10 @@ const MarkerControl: React.FC<MarkerControlProps> = ({
     return colors[Math.floor(Math.random() * colors.length)];
   };
   const isPointInBoundary = (point: L.LatLng): boolean => {
-    if (!boundary.length) return true;
-    
+    if (!boundary.length) {
+      return true;
+    }
+
     const x = point.lng;
     const y = point.lat;
     let inside = false;
@@ -46,11 +48,13 @@ const MarkerControl: React.FC<MarkerControlProps> = ({
     for (let i = 0, j = boundary.length - 1; i < boundary.length; j = i++) {
       const [yi, xi] = boundary[i];
       const [yj, xj] = boundary[j];
-      
+
       const intersect = ((yi > y) !== (yj > y)) &&
         (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-      
-      if (intersect) inside = !inside;
+
+      if (intersect) {
+        inside = !inside;
+      }
     }
 
     return inside;
@@ -63,7 +67,7 @@ const MarkerControl: React.FC<MarkerControlProps> = ({
         <div class="w-8 h-8 flex items-center justify-center relative group">
           <div class="absolute w-6 h-6 rounded-full bg-white opacity-25"></div>
           <div class="w-4 h-4 rounded-full bg-white border-2 transform transition-transform group-hover:scale-110"
-               style="border-color: ${color};">
+              style="border-color: ${color};">
           </div>
         </div>`,
       iconSize: [42, 42],  // Slightly smaller
@@ -72,7 +76,9 @@ const MarkerControl: React.FC<MarkerControlProps> = ({
   };
 
   const cleanupMarker = () => {
-    if (!activeMarkerRef.current) return;
+    if (!activeMarkerRef.current) {
+      return;
+    }
     map.removeLayer(activeMarkerRef.current);
     activeMarkerRef.current = null;
     setShowConfirm(false);
@@ -87,22 +93,22 @@ const MarkerControl: React.FC<MarkerControlProps> = ({
     let lastValidPosition: L.LatLng;
 
     const handleMapClick = (e: L.LeafletMouseEvent) => {
-        if (!isPointInBoundary(e.latlng)) {
-            return;
-        }
-        
-        cleanupMarker();
-        
-        // Generate color when creating marker
-        const markerColor = generateRandomColor();
-        const marker = L.marker(e.latlng, {
-            icon: createMarkerIcon(markerColor),
-            draggable: true
-        }).addTo(map);
-        // Store color with marker
-        (marker as any).color = markerColor;
-        
-        lastValidPosition = e.latlng;
+      if (!isPointInBoundary(e.latlng)) {
+        return;
+      }
+
+      cleanupMarker();
+
+      // Generate color when creating marker
+      const markerColor = generateRandomColor();
+      const marker = L.marker(e.latlng, {
+        icon: createMarkerIcon(markerColor),
+        draggable: true
+      }).addTo(map);
+      // Store color with marker
+      (marker as any).color = markerColor;
+
+      lastValidPosition = e.latlng;
 
       marker.on('drag', (dragEvent) => {
         const newPos = dragEvent.target.getLatLng();
@@ -162,7 +168,7 @@ const MarkerControl: React.FC<MarkerControlProps> = ({
       )}
 
       {showConfirm && (
-        <div 
+        <div
           ref={confirmContainerRef}
           className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-lg z-[1000]"
         >

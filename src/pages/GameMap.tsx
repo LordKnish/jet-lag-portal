@@ -105,10 +105,10 @@ const GameMap: React.FC = () => {
       prev.map(obj =>
         obj.id === id
           ? {
-              ...obj,
-              opacity: obj.visible ? 0 : obj.opacity ?? 0.4,
-              visible: !obj.visible,
-            }
+            ...obj,
+            opacity: obj.visible ? 0 : obj.opacity ?? 0.4,
+            visible: !obj.visible,
+          }
           : obj
       )
     );
@@ -167,8 +167,8 @@ const GameMap: React.FC = () => {
         if (obj.type === 'polygon' || obj.type === 'rectangle') {
           const positions = Array.isArray(obj.data)
             ? (obj.data as [number, number][]).map(
-                ([lat, lng]) => [lat, lng] as LatLngExpression
-              )
+              ([lat, lng]) => [lat, lng] as LatLngExpression
+            )
             : [];
           layer = L.polygon(positions, {
             color: obj.color,
@@ -203,11 +203,10 @@ const GameMap: React.FC = () => {
   // Handle GPS toggle
   const handleGpsToggle = useCallback(() => {
     setGpsEnabled(prev => {
-      const newState = !prev;
-      return newState;
+      return !prev;
     });
   }, []); // Empty dependency array ensures stable callback
-  
+
   useEffect(() => {
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
@@ -217,12 +216,14 @@ const GameMap: React.FC = () => {
       (error) => console.error('GPS Error:', error.message),
       { enableHighAccuracy: true }
     );
-  
+
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
   const paddedBoundary = useMemo(() => {
-    if (boundary.length === 0) return null;
+    if (boundary.length === 0) {
+      return null;
+    }
 
     const latLngBoundary = boundary.map(([lat, lng]) => L.latLng(lat, lng));
     const latLngBounds = L.latLngBounds(latLngBoundary);
@@ -236,8 +237,8 @@ const GameMap: React.FC = () => {
     }
     return defaultCenter;
   }, [paddedBoundary, defaultCenter]);
-  
-  
+
+
 
   const handleMarkerCreate = useCallback((markerData: MarkerData) => {
     const newObject: Layer = {
@@ -270,7 +271,7 @@ const GameMap: React.FC = () => {
 
       <div className="flex-1 flex overflow-hidden w-full">
         <div className="flex-1 relative w-full">
-        <MapContainer
+          <MapContainer
             center={initialCenter} // Use the calculated initial center
             zoom={14}
             className="h-full w-full"
@@ -435,7 +436,7 @@ const GameMap: React.FC = () => {
 
             <MeasurementControl isEnabled={mapMode === 'measure'} />
             <GpsControl gpsEnabled={gpsEnabled} />
-            <MarkerControl 
+            <MarkerControl
               isEnabled={mapMode === 'marker'}
               boundary={boundary}
               onMarkerCreate={handleMarkerCreate}

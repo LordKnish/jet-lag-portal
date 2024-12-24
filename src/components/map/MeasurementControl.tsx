@@ -103,7 +103,9 @@ const MeasurementControl: React.FC<MeasurementControlProps> = ({ isEnabled }) =>
   };
 
   useEffect(() => {
-    if (!isEnabled) return;
+    if (!isEnabled) {
+      return;
+    }
 
     const handleMapClick = (e: L.LeafletMouseEvent) => {
       if (measurementPoints.length >= 2) {

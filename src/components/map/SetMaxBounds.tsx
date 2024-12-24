@@ -5,20 +5,20 @@ import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
 interface SetMaxBoundsProps {
-  bounds: L.LatLngBounds | null;
+    bounds: L.LatLngBounds | null;
 }
 
 const SetMaxBounds: React.FC<SetMaxBoundsProps> = ({ bounds }) => {
-  const map = useMap();
+    const map = useMap();
 
-  useEffect(() => {
-    if (bounds) {
-      const paddedBounds = bounds.pad(0.5); // 10% padding
-      map.setMaxBounds(paddedBounds);
-    }
-  }, [map, bounds]);
+    useEffect(() => {
+        if (bounds) {
+            const paddedBounds = bounds.pad(0.5); // 10% padding
+            map.setMaxBounds(paddedBounds);
+        }
+    }, [map, bounds]);
 
-  return null;
+    return null;
 };
 
 export default SetMaxBounds;

@@ -41,7 +41,7 @@ const CircleDrawingControl: React.FC<CircleDrawingControlProps> = ({
     if (radiusLabelRef.current) {
       const center = circle.getLatLng();
       radiusLabelRef.current.setLatLng(center);
-      
+
       const icon = L.divIcon({
         className: 'radius-label-container',
         html: `<div class="text-xl font-bold" 
@@ -84,21 +84,27 @@ const CircleDrawingControl: React.FC<CircleDrawingControlProps> = ({
         yi > y !== yj > y &&
         x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
 
-      if (intersect) inside = !inside;
+      if (intersect) {
+        inside = !inside;
+      }
     }
     return inside;
   };
 
   // Handle map interaction logic
   useEffect(() => {
-    if (!isEnabled || isLocked) return; // Block interactions if locked or disabled
+    if (!isEnabled || isLocked) {
+      return;
+    } // Block interactions if locked or disabled
 
     map.dragging.disable();
 
     const snapThreshold = 100; // meters
 
     const handleMouseDown = (e: L.LeafletMouseEvent) => {
-      if (isLocked) return; // Block new circles if already locked
+      if (isLocked) {
+        return;
+      } // Block new circles if already locked
 
       let clickLatLng = e.latlng;
 
@@ -112,7 +118,9 @@ const CircleDrawingControl: React.FC<CircleDrawingControlProps> = ({
       }
 
       // Boundary check
-      if (!isPointInPolygon(clickLatLng, boundary)) return;
+      if (!isPointInPolygon(clickLatLng, boundary)) {
+        return;
+      }
 
       // Start circle creation
       initialClickRef.current = clickLatLng;
@@ -140,19 +148,21 @@ const CircleDrawingControl: React.FC<CircleDrawingControlProps> = ({
       setIsLocked(true);
 
       const handleMouseMove = (moveEvent: L.LeafletMouseEvent) => {
-        if (!circleRef.current || !initialClickRef.current) return;
-      
+        if (!circleRef.current || !initialClickRef.current) {
+          return;
+        }
+
         // Calculate radius based on mouse movement
         const radius = initialClickRef.current.distanceTo(moveEvent.latlng);
         const snappedRadius = findNearestRadius(radius);
-      
+
         // Update circle radius
         circleRef.current.setRadius(snappedRadius);
-      
+
         // Update radius label dynamically
         updateRadiusLabel(circleRef.current, snappedRadius); // Add this line
       };
-      
+
 
       const handleMouseUp = () => {
         setShowConfirm(true); // Show confirm/cancel buttons

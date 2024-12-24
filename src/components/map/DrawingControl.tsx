@@ -11,7 +11,7 @@ import { latLngToCoordinate } from '../../types/map';
 interface DrawingControlProps {
   onDrawComplete?: (coordinates: [number, number][]) => void; // Changed to accept coordinates
   isDrawingMode: boolean;
-  boundary?: [number, number][]; 
+  boundary?: [number, number][];
 }
 
 
@@ -25,7 +25,7 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
   // Keep references to the polygon layer and all clicked vertices
   const polygonRef = useRef<L.Polygon | null>(null);
   const [vertices, setVertices] = useState<L.LatLng[]>([]);
-  
+
   // Confirm/Cancel UI
   const [showConfirm, setShowConfirm] = useState(false);
   const confirmContainerRef = useRef<HTMLDivElement>(null);
@@ -37,10 +37,10 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
     if (!polygon.length) {
       return true;
     } // If no boundary, always allow
-    const x = point.lng; 
+    const x = point.lng;
     const y = point.lat;
     let inside = false;
-  
+
     for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
       const [latI, lngI] = polygon[i];
       const [latJ, lngJ] = polygon[j];
@@ -48,11 +48,11 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
       const yi = latI;
       const xj = lngJ;
       const yj = latJ;
-      
+
       const intersect =
         (yi > y) !== (yj > y) &&
         x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
-  
+
       if (intersect) {
         inside = !inside;
       }
@@ -79,16 +79,16 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
     if (polygonRef.current && onDrawComplete) {
       const latLngs = polygonRef.current.getLatLngs()[0] as L.LatLng[];
       const coordinates = latLngs.map(latLngToCoordinate);
-      
+
       onDrawComplete(coordinates); // Pass coordinates instead of the layer
     }
     cleanupPolygon();
   };
-  
-  
-  
-  
-  
+
+
+
+
+
 
   const handleCancel = () => {
     cleanupPolygon();
@@ -178,7 +178,7 @@ const DrawingControl: React.FC<DrawingControlProps> = ({
       )}
 
       {showConfirm && (
-        <div 
+        <div
           ref={confirmContainerRef}
           className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-lg z-[1000]"
         >

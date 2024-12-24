@@ -103,13 +103,13 @@ const GpsControl: React.FC<GpsControlProps> = ({ gpsEnabled }) => {
       (position) => {
         const { latitude, longitude } = position.coords;
         const latlng = L.latLng(latitude, longitude);
-    
+
         if (!marker) {
           const newMarker = L.marker(latlng, { icon: gpsIcon }).addTo(map);
           setMarker(newMarker);
         } else {
           marker.setLatLng(latlng);
-    
+
           // Snap feedback logic here
           if (gpsEnabled && userLocation !== null) { // Ensure GPS is on and userLocation exists
             const distance = marker.getLatLng().distanceTo(userLocation);
@@ -130,7 +130,7 @@ const GpsControl: React.FC<GpsControlProps> = ({ gpsEnabled }) => {
         maximumAge: 0,
       }
     );
-    
+
 
     return () => {
       navigator.geolocation.clearWatch(watchId);
