@@ -17,11 +17,15 @@ export interface Layer {
   visible: boolean;
   color: string;
   opacity?: number; // Add opacity property
-  type: 'polygon' | 'circle' | 'rectangle';
-  data: PolygonData | CircleData | RectangleData | null;
+  type: 'polygon' | 'circle' | 'rectangle' | 'marker';  // Add 'marker'
+  data: PolygonData | CircleData | RectangleData | MarkerData | null;
 }
 
-
+export interface MarkerData {
+  position: Coordinate;
+  label: string;
+  color: string;  // Add this
+}
 // Utility function to convert LatLng to Coordinate
 export const latLngToCoordinate = (latLng: LatLng): Coordinate => [
   latLng.lat,

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Trash2, Eye, EyeOff } from 'lucide-react';
-import { CircleData, Coordinate, Layer, RectangleData } from '../../types/map';
+import { CircleData, Coordinate, Layer, MarkerData, RectangleData } from '../../types/map';
 import Chrome from '@uiw/react-color-chrome';
 
 interface ObjectPanelProps {
@@ -85,6 +85,12 @@ const ObjectItem: React.FC<{
   
       const area = calculateArea(polygonData);
       return `Area: ${area.toFixed(1)} m²`;
+    }
+
+    if (object.type === 'marker' && 'position' in object.data) {
+      const markerData = object.data as MarkerData;
+      const [lat, lng] = markerData.position;
+      return `${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
     }
   
     return ''; // Default for unsupported types

@@ -118,13 +118,6 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
           <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">
             <ToolButton
-              icon={<SelectionAll size={24} weight="duotone" />}
-              label="Selection"
-              onClick={() => onToolChange?.('select')}
-              active={activeTool === 'select'}
-              disabled={false}
-            />
-            <ToolButton
               icon={<ArrowsOutCardinal size={24} weight="bold" />}
               label="Move Shape"
               onClick={() => onToolChange?.('move')}
@@ -149,19 +142,13 @@ const Toolbar: React.FC<ToolbarProps> = ({
               disabled={false}
             />
             <ToolButton
-              icon={<CirclesFour size={24} weight="duotone" />}
-              label="Distance Rings"
-              onClick={() => onToolChange?.('rings')}
-              active={activeTool === 'rings'}
-              disabled={false}
-            />
-            <ToolButton
               icon={<MapPin size={24} weight="duotone" />}
               label="Place Marker"
               onClick={() => onToolChange?.('marker')}
               active={activeTool === 'marker'}
               disabled={false}
             />
+
           </div>
 
           <div className="flex items-center gap-1 px-3 border-r border-jl-sage/30">

@@ -10,6 +10,7 @@ import {
   FeatureGroup,
   LayersControl,
   ScaleControl,
+  Marker,
 } from 'react-leaflet';
 import L, { LatLng, LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -20,10 +21,11 @@ import SquareDrawingControl from '../components/map/SquareDrawingControl';
 import CircleDrawingControl from '../components/map/CircleDrawingControl';
 import MoveTool from '../components/map/MoveTool';
 import MapClickHandler from '../components/map/MapClickHandler';
-import { Layer, Coordinate, PolygonData, CircleData, RectangleData } from '../types/map';
+import { Layer, Coordinate, PolygonData, CircleData, RectangleData, MarkerData } from '../types/map';
 import { MapMode } from '../types/toolbar';
 import MeasurementControl from '../components/map/MeasurementControl';
 import GpsControl from '../components/map/GpsControl';
+import MarkerControl from '../components/map/MarkerControl';
 
 const parseWKTPolygon = (wkt: string): Coordinate[] => {
   const coordsString = wkt.replace(/POLYGON\s*\(\((.*)\)\)/i, '$1').trim();
@@ -217,7 +219,19 @@ const GameMap: React.FC = () => {
   
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
-  
+
+  const handleMarkerCreate = useCallback((markerData: MarkerData) => {
+    const newObject: Layer = {
+      id: `marker-${Date.now()}`,
+      name: markerData.label,
+      visible: true,
+      color: markerData.color, // Use the color from markerData
+      opacity: 0.4,
+      type: 'marker',
+      data: markerData
+    };
+    setObjects(prev => [...prev, newObject]);
+  }, []);
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden relative">
@@ -344,6 +358,27 @@ const GameMap: React.FC = () => {
                   />
                 );
               }
+              if (obj.type === 'marker' && 'position' in obj.data) {
+                const markerData = obj.data as MarkerData;
+                return (
+                  <Marker
+                    key={obj.id}
+                    position={markerData.position as LatLngExpression}
+                    icon={L.divIcon({
+                      className: 'custom-marker-icon',
+                      html: `
+                        <div class="w-8 h-8 flex items-center justify-center relative group">
+                          <div class="absolute w-6 h-6 rounded-full bg-white opacity-25"></div>
+                          <div class="w-4 h-4 rounded-full bg-white border-2 transform transition-transform group-hover:scale-110"
+                              style="border-color: ${obj.color};">
+                          </div>
+                        </div>`,
+                      iconSize: [44, 44],  // Slightly smaller
+                      iconAnchor: [22, 22] // Half of iconSize
+                    })}
+                  />
+                );
+              }
               return null;
             })}
 
@@ -373,6 +408,12 @@ const GameMap: React.FC = () => {
 
             <MeasurementControl isEnabled={mapMode === 'measure'} />
             <GpsControl gpsEnabled={gpsEnabled} />
+            <MarkerControl 
+              isEnabled={mapMode === 'marker'}
+              boundary={boundary}
+              onMarkerCreate={handleMarkerCreate}
+            />
+
           </MapContainer>
         </div>
 
