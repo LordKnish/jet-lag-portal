@@ -22,18 +22,18 @@ const Home = () => {
           <button
             onClick={() => navigate('/game')}
             className="w-full py-4 bg-jl-teal text-white text-xl font-display 
-                     rounded-lg shadow-lg hover:bg-opacity-90 
-                     transition-all transform hover:-translate-y-0.5"
+                    rounded-lg shadow-lg hover:bg-opacity-90 
+                    transition-all transform hover:-translate-y-0.5"
           >
             Start Game
           </button>
-          
+
           <button
             onClick={() => navigate('/rules')}
             className="w-full py-4 bg-white text-jl-teal text-xl font-display 
-                     rounded-lg shadow-lg border-2 border-jl-teal 
-                     hover:bg-jl-teal hover:text-white
-                     transition-all transform hover:-translate-y-0.5"
+                    rounded-lg shadow-lg border-2 border-jl-teal 
+                    hover:bg-jl-teal hover:text-white
+                    transition-all transform hover:-translate-y-0.5"
           >
             Read Rules
           </button>

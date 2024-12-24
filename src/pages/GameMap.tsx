@@ -276,7 +276,8 @@ const GameMap: React.FC = () => {
             zoom={14}
             className="h-full w-full"
             zoomControl={false}
-            maxZoom={19} // Optionally set a max zoom level
+            maxZoom={18} // Optionally set a max zoom level
+            minZoom={12}
           >
             <SetMaxBounds bounds={paddedBoundary} /> {/* Add the custom component */}
 
