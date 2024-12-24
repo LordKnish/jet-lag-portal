@@ -17,6 +17,24 @@
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
+@media (max-width: 768px) {
+  .game-container {
+    flex-direction: column; /* Stack toolbar, map, and menu vertically */
+  }
+
+  .map-container {
+    height: 80%; /* Map takes 80% of the screen */
+  }
+
+  .object-panel {
+    height: 20%; /* Object menu takes 20% */
+    overflow-y: auto; /* Scrollable */
+  }
+
+  .toolbar {
+    flex-shrink: 0; /* Toolbar always visible */
+  }
+}
 
 .distance-label {
   background: white;

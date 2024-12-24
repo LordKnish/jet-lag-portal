@@ -19,212 +19,190 @@ const CircleDrawingControl: React.FC<CircleDrawingControlProps> = ({
   userLocation,
 }) => {
   const map = useMap();
-  const circleRef = useRef<L.Circle | null>(null);
-  const radiusLabelRef = useRef<L.Marker | null>(null);
-  const initialClickRef = useRef<L.LatLng | null>(null);
-  const confirmContainerRef = useRef<HTMLDivElement>(null);
-
+  const [isDrawing, setIsDrawing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [isLocked, setIsLocked] = useState(false); // Lock state during active circle
+  const circleRef = useRef<L.Circle | null>(null);
+  const labelRef = useRef<L.Marker | null>(null);
+  const startPointRef = useRef<L.LatLng | null>(null);
 
-  // Radius steps for snapping
   const radiusSteps = [50, 100, 200, 400, 800, 1600];
 
-  const findNearestRadius = (radius: number) => {
-    return radiusSteps.reduce((prev, curr) => {
-      return Math.abs(curr - radius) < Math.abs(prev - radius) ? curr : prev;
-    });
+  const isPointInBoundary = (point: L.LatLng): boolean => {
+    if (!boundary.length) return true;
+    const x = point.lng;
+    const y = point.lat;
+    let inside = false;
+
+    for (let i = 0, j = boundary.length - 1; i < boundary.length; j = i++) {
+      const yi = boundary[i][0];
+      const xi = boundary[i][1];
+      const yj = boundary[j][0];
+      const xj = boundary[j][1];
+
+      const intersect = ((yi > y) !== (yj > y)) &&
+        (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
   };
 
-  // Update radius label position and content
-  const updateRadiusLabel = (circle: L.Circle, radius: number) => {
-    if (radiusLabelRef.current) {
-      const center = circle.getLatLng();
-      radiusLabelRef.current.setLatLng(center);
+  const updateLabel = (center: L.LatLng, radius: number) => {
+    if (!labelRef.current) return;
 
-      const icon = L.divIcon({
-        className: 'radius-label-container',
+    // Set label position to circle center
+    labelRef.current.setLatLng(center);
+
+    // Update label icon with new radius
+    labelRef.current.setIcon(L.divIcon({
+      className: 'radius-label-container',
         html: `<div class="text-xl font-bold" 
               style="color: white; text-shadow: 1px 1px 3px rgba(0,0,0,0.5);">
                 ${Math.round(radius)}m
               </div>`,
         iconSize: [80, 30],
         iconAnchor: [40, 15]
-      });
-      radiusLabelRef.current.setIcon(icon);
-    }
+    }));
   };
 
-  const cleanupCircle = () => {
+  const createCircle = (center: L.LatLng) => {
+    if (!isPointInBoundary(center) || showConfirm) return;
+
+    const circle = L.circle(center, {
+      radius: 100,
+      color: '#5F9EA0',
+      fillColor: '#5F9EA0',
+      fillOpacity: 0.2,
+      weight: 3
+    }).addTo(map);
+
+    const label = L.marker(center).addTo(map);
+    updateLabel(center, 100);
+
+    circleRef.current = circle;
+    labelRef.current = label;
+    startPointRef.current = center;
+    setIsDrawing(true);
+  };
+
+  const updateCircle = (latlng: L.LatLng) => {
+    if (!circleRef.current || !startPointRef.current || !isDrawing) return;
+
+    const radius = startPointRef.current.distanceTo(latlng);
+    const snappedRadius = radiusSteps.reduce((prev, curr) =>
+      Math.abs(curr - radius) < Math.abs(prev - radius) ? curr : prev
+    );
+
+    circleRef.current.setRadius(snappedRadius);
+    updateLabel(circleRef.current.getLatLng(), snappedRadius);
+  };
+
+  const cleanup = () => {
     if (circleRef.current) {
-      circleRef.current.remove();
+      map.removeLayer(circleRef.current);
       circleRef.current = null;
     }
-    if (radiusLabelRef.current) {
-      radiusLabelRef.current.remove();
-      radiusLabelRef.current = null;
+    if (labelRef.current) {
+      map.removeLayer(labelRef.current);
+      labelRef.current = null;
     }
-    initialClickRef.current = null;
-    setShowConfirm(false); // Hide confirm UI
-    setIsLocked(false); // Unlock for new circles
+    startPointRef.current = null;
+    setIsDrawing(false);
+    setShowConfirm(false);
   };
-
-  const isPointInPolygon = (point: L.LatLng, polygon: [number, number][]): boolean => {
-    const x = point.lng;
-    const y = point.lat;
-    let inside = false;
-
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-      const yi = polygon[i][0];
-      const xi = polygon[i][1];
-      const yj = polygon[j][0];
-      const xj = polygon[j][1];
-
-      const intersect =
-        yi > y !== yj > y &&
-        x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
-
-      if (intersect) {
-        inside = !inside;
-      }
-    }
-    return inside;
-  };
-
-  // Handle map interaction logic
-  useEffect(() => {
-    if (!isEnabled || isLocked) {
-      return;
-    } // Block interactions if locked or disabled
-
-    map.dragging.disable();
-
-    const snapThreshold = 100; // meters
-
-    const handleMouseDown = (e: L.LeafletMouseEvent) => {
-      if (isLocked) {
-        return;
-      } // Block new circles if already locked
-
-      let clickLatLng = e.latlng;
-
-      // Snap to GPS location if within threshold
-      if (
-        gpsEnabled &&
-        userLocation &&
-        userLocation.distanceTo(clickLatLng) <= snapThreshold
-      ) {
-        clickLatLng = userLocation;
-      }
-
-      // Boundary check
-      if (!isPointInPolygon(clickLatLng, boundary)) {
-        return;
-      }
-
-      // Start circle creation
-      initialClickRef.current = clickLatLng;
-
-      const circle = L.circle(clickLatLng, {
-        radius: 100,
-        color: '#5F9EA0',
-        fillColor: '#5F9EA0',
-        fillOpacity: 0.2,
-        weight: 3,
-      }).addTo(map);
-      circleRef.current = circle;
-
-      const label = L.marker(clickLatLng, {
-        icon: L.divIcon({
-          className: 'radius-label-container',
-          html: '<div class="text-xl font-bold" style="color: white; text-shadow: 1px 1px 3px rgba(0,0,0,0.5);">100m</div>',
-          iconSize: [80, 30],
-          iconAnchor: [40, 15],
-        }),
-      }).addTo(map);
-      radiusLabelRef.current = label;
-
-      // Lock further interactions
-      setIsLocked(true);
-
-      const handleMouseMove = (moveEvent: L.LeafletMouseEvent) => {
-        if (!circleRef.current || !initialClickRef.current) {
-          return;
-        }
-
-        // Calculate radius based on mouse movement
-        const radius = initialClickRef.current.distanceTo(moveEvent.latlng);
-        const snappedRadius = findNearestRadius(radius);
-
-        // Update circle radius
-        circleRef.current.setRadius(snappedRadius);
-
-        // Update radius label dynamically
-        updateRadiusLabel(circleRef.current, snappedRadius); // Add this line
-      };
-
-
-      const handleMouseUp = () => {
-        setShowConfirm(true); // Show confirm/cancel buttons
-
-        // Detach listeners
-        map.off('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-
-      map.on('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    };
-
-    map.on('mousedown', handleMouseDown);
-
-    return () => {
-      map.off('mousedown', handleMouseDown);
-      map.dragging.enable();
-    };
-  }, [map, isEnabled, isLocked, gpsEnabled, userLocation, boundary]);
 
   const handleConfirm = () => {
     if (circleRef.current && onCircleComplete) {
-      const center = circleRef.current.getLatLng();
-      const radius = circleRef.current.getRadius();
-      onCircleComplete(center, radius);
+      onCircleComplete(circleRef.current.getLatLng(), circleRef.current.getRadius());
     }
-    cleanupCircle(); // Unlock after confirmation
+    setShowConfirm(false);
   };
 
-  const handleCancel = () => {
-    cleanupCircle(); // Unlock after cancel
-  };
+  useEffect(() => {
+    if (!isEnabled) {
+      cleanup();
+      map.dragging.enable();
+      return;
+    }
+
+    const handleStart = (latlng: L.LatLng) => {
+      if (!showConfirm) createCircle(latlng);
+    };
+
+    const handleMove = (latlng: L.LatLng) => {
+      updateCircle(latlng);
+      map.dragging.disable();
+    };
+
+    const handleEnd = () => {
+      if (isDrawing) {
+        setIsDrawing(false);
+        setShowConfirm(true);
+      }
+    };
+
+    // Mouse event handlers
+    const handleMouseDown = (e: L.LeafletMouseEvent) => handleStart(e.latlng);
+    const handleMouseMove = (e: L.LeafletMouseEvent) => handleMove(e.latlng);
+    const handleMouseUp = () => handleEnd();
+
+    // Touch event handlers
+    const handleTouchStart = (e: TouchEvent) => {
+      if (!e.touches.length) return;
+      const touch = e.touches[0];
+      const container = map.getContainer();
+      const rect = container.getBoundingClientRect();
+      const point = L.point(touch.clientX - rect.left, touch.clientY - rect.top);
+      handleStart(map.containerPointToLatLng(point));
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (!e.touches.length) return;
+      const touch = e.touches[0];
+      const container = map.getContainer();
+      const rect = container.getBoundingClientRect();
+      const point = L.point(touch.clientX - rect.left, touch.clientY - rect.top);
+      handleMove(map.containerPointToLatLng(point));
+    };
+
+    const container = map.getContainer();
+    map.on('mousedown', handleMouseDown);
+    map.on('mousemove', handleMouseMove);
+    map.on('mouseup', handleMouseUp);
+    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleEnd);
+
+    return () => {
+      map.off('mousedown', handleMouseDown);
+      map.off('mousemove', handleMouseMove);
+      map.off('mouseup', handleMouseUp);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleEnd);
+    };
+  }, [isEnabled, map, showConfirm, isDrawing]);
 
   return (
     <>
-      {isEnabled && !isLocked && (
+      {isEnabled && !showConfirm && !isDrawing && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg z-[1000]">
           <span className="text-sm font-medium text-gray-700">
-            Click and drag to draw circle
+            {L.Browser.touch ? 'Tap and drag' : 'Click and drag'} to draw circle
           </span>
         </div>
       )}
+
       {showConfirm && (
-        <div
-          ref={confirmContainerRef}
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-lg z-[1000]"
-        >
-          <div className="flex items-center gap-2 p-2">
-            <button
-              onClick={handleCancel}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
-              title="Cancel"
-            >
-              <X className="h-5 w-5" />
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white rounded-full shadow-lg z-[1000]">
+          <div className="flex items-center gap-4 p-4">
+            <button onClick={cleanup}
+              className="w-14 h-14 flex items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600">
+              <X className="h-8 w-8" />
             </button>
-            <button
-              onClick={handleConfirm}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-jl-teal text-white hover:bg-jl-teal/90"
-              title="Confirm"
-            >
-              <Check className="h-5 w-5" />
+            <button onClick={handleConfirm}
+              className="w-14 h-14 flex items-center justify-center rounded-full bg-jl-teal text-white hover:bg-jl-teal/90">
+              <Check className="h-8 w-8" />
             </button>
           </div>
         </div>

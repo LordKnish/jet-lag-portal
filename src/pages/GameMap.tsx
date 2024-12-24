@@ -27,6 +27,7 @@ import MeasurementControl from '../components/map/MeasurementControl';
 import GpsControl from '../components/map/GpsControl';
 import MarkerControl from '../components/map/MarkerControl';
 import SetMaxBounds from '../components/map/SetMaxBounds';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 const parseWKTPolygon = (wkt: string): Coordinate[] => {
   const coordsString = wkt.replace(/POLYGON\s*\(\((.*)\)\)/i, '$1').trim();
@@ -49,7 +50,10 @@ const GameMap: React.FC = () => {
   const defaultCenter: Coordinate = useMemo(() => [32.07, 34.7674], []);
   const [gpsEnabled, setGpsEnabled] = useState(false); // Separate GPS state
   const [userLocation, setUserLocation] = useState<L.LatLng | null>(null);
-
+  const [isPanelVisible, setPanelVisible] = useState(false);
+  const togglePanel = useCallback(() => {
+    setPanelVisible(prev => !prev);
+  }, []);
   // Create new shape object
   const handleAddObject = useCallback(
     (
@@ -254,7 +258,7 @@ const GameMap: React.FC = () => {
   }, []);
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden relative">
+    <div className="h-screen w-screen flex flex-col overflow-hidden relative bg-white">
       <Toolbar
         onToolChange={handleToolChange}
         activeTool={mapMode}
@@ -269,8 +273,11 @@ const GameMap: React.FC = () => {
 
 
 
-      <div className="flex-1 flex overflow-hidden w-full">
-        <div className="flex-1 relative w-full">
+      <div className="flex-1 flex flex-col md:flex-row relative overflow-hidden">
+        {/* Map Container */}
+        <div className={`relative flex-1 transition-all duration-300 ease-in-out z-0 overflow-hidden
+          ${isPanelVisible ? 'h-[70vh]' : 'h-full'}
+          md:h-full`}>
           <MapContainer
             center={initialCenter} // Use the calculated initial center
             zoom={14}
@@ -446,16 +453,58 @@ const GameMap: React.FC = () => {
           </MapContainer>
         </div>
 
-        <div className="w-80 flex-none border-l border-jl-sage/30 bg-jl-cream">
-          <ObjectPanel
-            objects={objects}
-            onDeleteObject={handleDeleteObject}
-            onToggleObject={handleToggleObject}
-            onRenameObject={handleRenameObject}
-            onChangeObjectColor={handleChangeObjectColor}
-            activeObject={activeObject}
-            setActiveObject={setActiveObject}
-          />
+        <div className="fixed bottom-0 left-0 right-0 md:static md:w-80 md:block">
+          {/* Toggle Button - Only show when not drawing */}
+          {!mapMode || !['draw', 'circle', 'rectangle'].includes(mapMode) ? (
+            <button
+              onClick={togglePanel}
+              className="absolute left-1/2 -translate-x-1/2 transform 
+    bg-jl-cream rounded-t-lg shadow-lg px-4 py-2 
+    flex items-center gap-2 md:hidden z-[9999]
+    border-t border-l border-r border-jl-sage/30
+    hover:bg-jl-sage/10
+    active:bg-jl-sage/30  // Increased opacity for active state
+    active:shadow-inner    // Added inner shadow for pressed effect
+    transition-all duration-300 ease-in-out"
+              style={{
+                bottom: isPanelVisible ? '30vh' : '0',
+                backgroundColor: '#FFFFFF'  // Force solid background
+              }}
+            >
+              {isPanelVisible ? (
+                <>
+                  <ChevronDown className="h-5 w-5 text-jl-teal" strokeWidth={2.5} />
+                  <span className="text-sm font-medium text-jl-teal">Hide Objects</span>
+                </>
+              ) : (
+                <>
+                  <ChevronUp className="h-5 w-5 text-jl-teal" strokeWidth={2.5} />
+                  <span className="text-sm font-medium text-jl-teal">Show Objects</span>
+                </>
+              )}
+            </button>
+          ) : null}
+
+          {/* Panel - Unchanged */}
+          <div className={`
+    absolute bottom-0 left-0 right-0 
+    md:relative md:w-full md:translate-y-0
+    transform transition-transform duration-300 ease-in-out
+    bg-jl-cream border-l border-jl-sage/30
+    ${isPanelVisible ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}
+    h-[30vh] md:h-full
+    flex flex-col overflow-hidden z-[9998]
+  `}>
+            <ObjectPanel
+              objects={objects}
+              onDeleteObject={handleDeleteObject}
+              onToggleObject={handleToggleObject}
+              onRenameObject={handleRenameObject}
+              onChangeObjectColor={handleChangeObjectColor}
+              activeObject={activeObject}
+              setActiveObject={setActiveObject}
+            />
+          </div>
         </div>
       </div>
     </div>
