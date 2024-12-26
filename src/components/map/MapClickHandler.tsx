@@ -48,6 +48,19 @@ const MapClickHandler: React.FC<MapClickHandlerProps> = ({
       });
       setActiveObject(clickedObject?.id || null);
     }
+    if (mapMode === 'edit') {
+      const clickedObject = objects.find(obj => {
+        if (obj.type === 'circle') {
+          const circleData = obj.data as CircleData;
+          const distance = e.latlng.distanceTo(L.latLng(circleData.center));
+          return distance <= circleData.radius;
+        } else {
+          const polygon = L.polygon(obj.data as Coordinate[]);
+          return polygon.getBounds().contains(e.latlng);
+        }
+      });
+      setActiveObject(clickedObject?.id || null);
+    }
   });
 
   return null; // No UI, just event handling

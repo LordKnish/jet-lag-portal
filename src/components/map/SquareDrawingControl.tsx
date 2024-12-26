@@ -60,6 +60,7 @@ const SquareDrawingControl: React.FC<SquareDrawingControlProps> = ({
   useEffect(() => {
     if (isEnabled) {
       map.dragging.disable();
+      map.dragging.disable();
     }
     return () => {
       map.dragging.enable();

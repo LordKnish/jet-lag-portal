@@ -1,6 +1,6 @@
 // src/pages/GameMap.tsx
 
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   MapContainer,
   TileLayer,
@@ -21,7 +21,7 @@ import SquareDrawingControl from '../components/map/SquareDrawingControl';
 import CircleDrawingControl from '../components/map/CircleDrawingControl';
 import MoveTool from '../components/map/MoveTool';
 import MapClickHandler from '../components/map/MapClickHandler';
-import { Layer, Coordinate, PolygonData, CircleData, RectangleData, MarkerData } from '../types/map';
+import { Layer, EditableLayer, Coordinate, CircleData, RectangleData, MarkerData, PolygonData } from '../types/map';
 import { MapMode } from '../types/toolbar';
 import MeasurementControl from '../components/map/MeasurementControl';
 import GpsControl from '../components/map/GpsControl';
@@ -29,6 +29,7 @@ import MarkerControl from '../components/map/MarkerControl';
 import SetMaxBounds from '../components/map/SetMaxBounds';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import UndoRedoManager from '../utils/UndoRedoManager';
+import EditTool from '../components/map/EditTool';
 
 const parseWKTPolygon = (wkt: string): Coordinate[] => {
   const coordsString = wkt.replace(/POLYGON\s*\(\((.*)\)\)/i, '$1').trim();
@@ -59,8 +60,25 @@ const GameMap: React.FC = () => {
     setPanelVisible(prev => !prev);
   }, []);
 
+  // Debugging: Log activeObject and objects
+  useEffect(() => {
+    console.log('Active Object ID:', activeObject);
+    console.log('Objects:', objects);
+  }, [activeObject, objects]);
+
+  let shapeForEdit: EditableLayer | null = null;
+  const found = objects.find(obj => obj.id === activeObject);
+  console.log('Found object for editing:', found);
+  if (
+    found &&
+    (found.type === 'circle' || found.type === 'polygon' || found.type === 'rectangle')
+  ) {
+    shapeForEdit = found as EditableLayer; // Type assertion to EditableLayer
+  }
+
   const saveStateToUndoRedo = useCallback((newState: Layer[]) => {
-    // Convert our Layer[] to the narrow ObjectState[] if needed
+    console.log('Saving state to UndoRedoManager:', newState);
+    // Convert our Layer[] to the narrow EditableLayer[] if needed
     undoRedoManager.current.addState(
       newState.map(obj => ({
         id: obj.id,
@@ -75,7 +93,9 @@ const GameMap: React.FC = () => {
     // Update canUndo/canRedo after adding a new snapshot
     setCanUndo(undoRedoManager.current.canUndo());
     setCanRedo(undoRedoManager.current.canRedo());
-  }, []);
+    console.log('Can Undo:', canUndo, 'Can Redo:', canRedo);
+  }, [canUndo, canRedo]);
+
   // Create new shape object
   const handleAddObject = useCallback(
     (
@@ -96,6 +116,7 @@ const GameMap: React.FC = () => {
           data,
         };
         const updated = [...prev, newObject];
+        console.log(`Adding new ${type}:`, newObject);
         // Immediately save the new state to Undo/Redo for reliability
         saveStateToUndoRedo(updated);
         return updated;
@@ -107,39 +128,61 @@ const GameMap: React.FC = () => {
   // Update shape data
   const handleUpdateObject = useCallback(
     (id: string, newData: Coordinate[] | CircleData | null) => {
+      console.log('handleUpdateObject CALLED with:', { id, newData });
       if (!newData) return;
-  
+
       setObjects(prev => {
         const updated = prev.map(obj => {
           if (obj.id !== id) return obj;
-  
-          // Explicitly handle circle data
+
           if (obj.type === 'circle') {
-            // Make sure newData is actually CircleData
             const circleData = newData as CircleData;
+
+            // Make sure we have exactly two numbers: [LAT, LNG]
+            const [possibleLat, possibleLng] = circleData.center;
+
+            // OPTIONAL: Debug logs to confirm what we are storing
+            console.log('Updating circle:', {
+              id,
+              lat: possibleLat,
+              lng: possibleLng,
+              radius: circleData.radius,
+            });
+
+            // Ensure the center has exactly two numbers
+            const safeCenter: [number, number] = [possibleLat, possibleLng];
+
             return {
               ...obj,
               data: {
-                center: circleData.center,
+                center: safeCenter,
                 radius: circleData.radius,
               },
             };
           }
-  
-          // Otherwise (polygon or rectangle), treat as coordinates array
-          return { ...obj, data: newData as Coordinate[] };
+
+          // For polygons/rectangles
+          // Ensure new reference for coordinates => triggers re-render
+          return {
+            ...obj,
+            data: Array.isArray(newData) ? [...newData] : newData,
+          };
         });
-  
-        // Ensure circle updates are captured by undo/redo
+
+        // Log the final updated array for debugging
+        console.log('Updated objects array:', updated);
+
         saveStateToUndoRedo(updated);
-  
-        return updated;
+
+        // Return a fresh array
+        return [...updated];
       });
     },
     [saveStateToUndoRedo]
   );
 
   const handleDeleteObject = useCallback((id: string) => {
+    console.log(`Deleting object with ID: ${id}`);
     setObjects(prev => {
       const updated = prev.filter(obj => obj.id !== id);
       saveStateToUndoRedo(updated); // <-- capture deletion for undo/redo
@@ -148,6 +191,7 @@ const GameMap: React.FC = () => {
   }, [saveStateToUndoRedo]);
 
   const handleToggleObject = useCallback((id: string) => {
+    console.log(`Toggling visibility for object ID: ${id}`);
     setObjects(prev =>
       prev.map(obj =>
         obj.id === id
@@ -161,14 +205,13 @@ const GameMap: React.FC = () => {
     );
   }, []);
 
-  // src/pages/GameMap.tsx
-
   const handleUndo = useCallback(() => {
     if (mapMode === 'circle') {
       setMapMode(null);
     }
     const prevState = undoRedoManager.current.undo();
     if (prevState) {
+      console.log('Performing Undo:', prevState);
       // Convert from stored state to the local `Layer` type
       setObjects(
         prevState.map(obj => ({
@@ -182,16 +225,14 @@ const GameMap: React.FC = () => {
     setCanRedo(undoRedoManager.current.canRedo());
   }, []);
 
-
-  // src/pages/GameMap.tsx
-
   const handleRedo = useCallback(() => {
     const nextState = undoRedoManager.current.redo();
     if (nextState) {
+      console.log('Performing Redo:', nextState);
       setObjects(
         nextState.map(obj => ({
           ...obj,
-          type: obj.type as 'rectangle' | 'circle' | 'marker' | 'polygon' // Explicit cast
+          type: obj.type as 'rectangle' | 'circle' | 'marker' | 'polygon', // Explicit cast
         }))
       );
       setCanUndo(undoRedoManager.current.canUndo());
@@ -199,13 +240,13 @@ const GameMap: React.FC = () => {
     }
   }, []);
 
-
-
   const handleRenameObject = useCallback((id: string, name: string) => {
+    console.log(`Renaming object ID: ${id} to ${name}`);
     setObjects(prev => prev.map(obj => (obj.id === id ? { ...obj, name } : obj)));
   }, []);
 
   const handleChangeObjectColor = useCallback((id: string, color: string) => {
+    console.log(`Changing color for object ID: ${id} to ${color}`);
     setObjects(prev => prev.map(obj => (obj.id === id ? { ...obj, color } : obj)));
   }, []);
 
@@ -224,6 +265,7 @@ const GameMap: React.FC = () => {
           if (wktDataMatch && wktDataMatch[1]) {
             const coordinates = parseWKTPolygon(wktDataMatch[1]);
             setBoundary(coordinates);
+            console.log('Loaded boundary:', coordinates);
           } else {
             throw new Error('Invalid boundary data format');
           }
@@ -234,6 +276,7 @@ const GameMap: React.FC = () => {
           err instanceof Error ? err.message : 'Failed to load game boundary';
         setError(`${errorMessage}. Please try refreshing the page.`);
         setIsLoading(false);
+        console.error(errorMessage);
       }
     };
     loadBoundary();
@@ -253,7 +296,7 @@ const GameMap: React.FC = () => {
 
         if (obj.type === 'polygon' || obj.type === 'rectangle') {
           const positions = Array.isArray(obj.data)
-            ? (obj.data as [number, number][]).map(
+            ? (obj.data as Coordinate[]).map(
               ([lat, lng]) => [lat, lng] as LatLngExpression
             )
             : [];
@@ -275,11 +318,13 @@ const GameMap: React.FC = () => {
           layerGroup.addLayer(layer);
         }
       });
+      console.log('Re-drew objects on the map:', objects);
     }
   }, [objects]);
 
   // Handle tool changes
   const handleToolChange = (tool: MapMode | null) => {
+    console.log(`Tool changed to: ${tool}`);
     if (tool === 'gps') {
       setGpsEnabled(prev => !prev); // Toggle GPS state
     } else {
@@ -290,17 +335,23 @@ const GameMap: React.FC = () => {
   // Handle GPS toggle
   const handleGpsToggle = useCallback(() => {
     setGpsEnabled(prev => {
+      console.log(`GPS Enabled: ${!prev}`);
       return !prev;
     });
-  }, []); // Empty dependency array ensures stable callback
+  }, []);
 
+  // GPS Position Watch
   useEffect(() => {
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
         setUserLocation(L.latLng(latitude, longitude));
+        console.log('User location updated:', [latitude, longitude]);
       },
-      (error) => console.error('GPS Error:', error.message),
+      (error) => {
+        console.error('GPS Error:', error.message);
+        setError(`GPS Error: ${error.message}`);
+      },
       { enableHighAccuracy: true }
     );
 
@@ -325,9 +376,8 @@ const GameMap: React.FC = () => {
     return defaultCenter;
   }, [paddedBoundary, defaultCenter]);
 
-
-
   const handleMarkerCreate = useCallback((markerData: MarkerData) => {
+    console.log('Creating new marker:', markerData);
     setObjects(prev => {
       const newObject: Layer = {
         id: `marker-${Date.now()}`,
@@ -359,9 +409,6 @@ const GameMap: React.FC = () => {
         onFillStyleChange={(style) => setFillStyle(style)}
         fillStyle={fillStyle}
       />
-
-
-
 
       <div className="flex-1 flex flex-col md:flex-row relative overflow-hidden">
         {/* Map Container */}
@@ -532,7 +579,6 @@ const GameMap: React.FC = () => {
               userLocation={userLocation} // Pass GPS coordinates
             />
 
-
             <MeasurementControl isEnabled={mapMode === 'measure'} />
             <GpsControl gpsEnabled={gpsEnabled} />
             <MarkerControl
@@ -541,6 +587,17 @@ const GameMap: React.FC = () => {
               onMarkerCreate={handleMarkerCreate}
             />
 
+            {mapMode === 'edit' && shapeForEdit && (
+              <EditTool
+                activeTool={mapMode}
+                selectedObject={shapeForEdit}
+                boundary={boundary}
+                onUpdateObject={handleUpdateObject}
+                onBoundaryViolation={() => {
+                  console.warn('Boundary violation detected during editing.');
+                }}
+              />
+            )}
           </MapContainer>
         </div>
 
@@ -550,13 +607,13 @@ const GameMap: React.FC = () => {
             <button
               onClick={togglePanel}
               className="absolute left-1/2 -translate-x-1/2 transform 
-    bg-jl-cream rounded-t-lg shadow-lg px-4 py-2 
-    flex items-center gap-2 md:hidden z-[9999]
-    border-t border-l border-r border-jl-sage/30
-    hover:bg-jl-sage/10
-    active:bg-jl-sage/30  // Increased opacity for active state
-    active:shadow-inner    // Added inner shadow for pressed effect
-    transition-all duration-300 ease-in-out"
+bg-jl-cream rounded-t-lg shadow-lg px-4 py-2 
+flex items-center gap-2 md:hidden z-[9999]
+border-t border-l border-r border-jl-sage/30
+hover:bg-jl-sage/10
+active:bg-jl-sage/30  // Increased opacity for active state
+active:shadow-inner    // Added inner shadow for pressed effect
+transition-all duration-300 ease-in-out"
               style={{
                 bottom: isPanelVisible ? '30vh' : '0',
                 backgroundColor: '#FFFFFF'  // Force solid background
@@ -578,14 +635,14 @@ const GameMap: React.FC = () => {
 
           {/* Panel - Unchanged */}
           <div className={`
-    absolute bottom-0 left-0 right-0 
-    md:relative md:w-full md:translate-y-0
-    transform transition-transform duration-300 ease-in-out
-    bg-jl-cream border-l border-jl-sage/30
-    ${isPanelVisible ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}
-    h-[30vh] md:h-full
-    flex flex-col overflow-hidden z-[9998]
-  `}>
+absolute bottom-0 left-0 right-0 
+md:relative md:w-full md:translate-y-0
+transform transition-transform duration-300 ease-in-out
+bg-jl-cream border-l border-jl-sage/30
+${isPanelVisible ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}
+h-[30vh] md:h-full
+flex flex-col overflow-hidden z-[9998]
+`}>
             <ObjectPanel
               objects={objects}
               onDeleteObject={handleDeleteObject}
